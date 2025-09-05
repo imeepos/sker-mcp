@@ -27,6 +27,7 @@ import {
   LOGGER,
   LOGGER_CONFIG,
   LOGGER_FACTORY,
+  LAYERED_LOGGER_FACTORY,
   APP_NAME,
   type McpServerConfig,
   type McpToolDefinition,
@@ -138,24 +139,13 @@ export function createPlatformProviders(): Provider[] {
       useClass: ErrorManager
     },
     
-    // Logger configuration provider - uses typed LoggerConfig interface
+    // Logger configuration provider - uses environment-based configuration
     {
       provide: LOGGER_CONFIG,
-      useValue: {
-        level: 'info',
-        format: 'json',
-        transports: {
-          console: {
-            enabled: true,
-            level: 'info'
-          },
-          file: {
-            enabled: true,
-            level: 'debug',
-            filename: 'sker-daemon.log'
-          }
-        }
-      } as LoggerConfig
+      useFactory: () => {
+        const { getLoggingConfig } = require('./logging/logging-config.js');
+        return getLoggingConfig();
+      }
     },
     
     // Winston Logger Factory provider
@@ -168,14 +158,24 @@ export function createPlatformProviders(): Provider[] {
       deps: [LOGGER_CONFIG, PROJECT_MANAGER]
     },
     
-    // Main logger provider - using Winston logger
+    // Layered Logger Factory provider
+    {
+      provide: LAYERED_LOGGER_FACTORY,
+      useFactory: (config: any, projectManager: any) => {
+        const { LayeredLoggerFactory } = require('./logging/layered-logger.js');
+        return new LayeredLoggerFactory(config, projectManager);
+      },
+      deps: [LOGGER_CONFIG, PROJECT_MANAGER]
+    },
+    
+    // Main logger provider - using Layered logger system
     {
       provide: LOGGER,
-      useFactory: (loggerFactory: any) => {
-        const factory = loggerFactory as any;
-        return factory.createLogger('system');
+      useFactory: (layeredLoggerFactory: any) => {
+        const factory = layeredLoggerFactory as any;
+        return factory.createPlatformLogger('system');
       },
-      deps: [LOGGER_FACTORY]
+      deps: [LAYERED_LOGGER_FACTORY]
     },
     
     // Plugin system providers

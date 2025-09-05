@@ -170,6 +170,11 @@ export const LOGGER_CONFIG = new InjectionToken<LoggerConfig>('LOGGER_CONFIG', {
 export const LOGGER_FACTORY = new InjectionToken<any>('LOGGER_FACTORY');
 
 /**
+ * Token for layered logger factory
+ */
+export const LAYERED_LOGGER_FACTORY = new InjectionToken<any>('LAYERED_LOGGER_FACTORY');
+
+/**
  * Token for application name used in logging
  */
 export const APP_NAME: StringToken<string> = 'APP_NAME';

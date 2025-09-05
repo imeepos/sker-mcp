@@ -9,6 +9,9 @@
 import { Injectable, Inject } from '@sker/di';
 import { LOGGER_CONFIG, PROJECT_MANAGER } from '../tokens.js';
 import type { ProjectManager } from '../project-manager.js';
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+import path from 'path';
 
 /**
  * Winston-based logger configuration
@@ -118,24 +121,26 @@ export interface IWinstonLogger {
 }
 
 /**
- * Mock Winston logger implementation
+ * Real Winston logger implementation
  * 
- * This provides the Winston logger interface without requiring the actual
- * Winston dependency to be installed. In production, this would be replaced
- * with the actual Winston implementation.
+ * This provides the full Winston logger functionality with enterprise-grade
+ * logging capabilities including file rotation, structured logging, and multi-transport support.
  */
 @Injectable()
-export class MockWinstonLogger implements IWinstonLogger {
+export class WinstonLogger implements IWinstonLogger {
   private requestContext: { requestId?: string; userId?: string } = {};
   private component: string;
   private config: WinstonLoggerConfig;
+  private winston: winston.Logger;
 
   constructor(
     component: string = 'system',
-    @Inject(LOGGER_CONFIG) config?: WinstonLoggerConfig
+    @Inject(LOGGER_CONFIG) config?: WinstonLoggerConfig,
+    @Inject(PROJECT_MANAGER) private projectManager?: ProjectManager
   ) {
     this.component = component;
     this.config = config || this.getDefaultConfig();
+    this.winston = this.createWinstonInstance();
   }
 
   debug(message: string, meta?: any): void {
@@ -155,12 +160,7 @@ export class MockWinstonLogger implements IWinstonLogger {
   }
 
   log(level: string, message: string, meta?: any): void {
-    // Check if logging level is enabled
-    if (!this.isLevelEnabled(level)) {
-      return;
-    }
-
-    const entry: LogEntry = {
+    const logEntry: LogEntry = {
       level,
       message,
       timestamp: new Date().toISOString(),
@@ -171,12 +171,15 @@ export class MockWinstonLogger implements IWinstonLogger {
       component: this.component
     };
 
-    // Format and output the log entry
-    this.outputLogEntry(entry);
+    // Use Winston logger with structured data
+    this.winston.log(level, message, {
+      ...logEntry,
+      ...meta
+    });
   }
 
   child(context: Record<string, any>): IWinstonLogger {
-    const childLogger = new MockWinstonLogger(this.component, this.config);
+    const childLogger = new WinstonLogger(this.component, this.config, this.projectManager);
     childLogger.requestContext = { ...this.requestContext, ...context };
     return childLogger;
   }
@@ -197,86 +200,77 @@ export class MockWinstonLogger implements IWinstonLogger {
     this.requestContext = {};
   }
 
-  private isLevelEnabled(level: string): boolean {
-    const levels = ['error', 'warn', 'info', 'debug', 'verbose', 'silly'];
-    const configLevel = this.config.level || 'info';
-    const levelIndex = levels.indexOf(level);
-    const configLevelIndex = levels.indexOf(configLevel);
-    return levelIndex <= configLevelIndex;
-  }
+  private createWinstonInstance(): winston.Logger {
+    const transports: winston.transport[] = [];
+    const logDir = this.projectManager 
+      ? path.join(this.projectManager.getProjectRoot(), 'logs')
+      : path.join(process.cwd(), 'logs');
 
-  private outputLogEntry(entry: LogEntry): void {
-    const format = this.config.format || 'simple';
-    let output: string;
-
-    switch (format) {
-      case 'json':
-        output = JSON.stringify(entry);
-        break;
-      case 'dev':
-        output = this.formatDevOutput(entry);
-        break;
-      case 'combined':
-        output = this.formatCombinedOutput(entry);
-        break;
-      default:
-        output = this.formatSimpleOutput(entry);
-    }
-
-    // Output to console if enabled
+    // Console transport
     if (this.config.transports?.console?.enabled !== false) {
-      this.consoleOutput(entry.level, output);
+      transports.push(new winston.transports.Console({
+        level: this.config.transports?.console?.level || this.config.level,
+        format: winston.format.combine(
+          winston.format.colorize({ all: true }),
+          winston.format.timestamp(),
+          winston.format.errors({ stack: true }),
+          winston.format.printf(({ timestamp, level, message, component, requestId, ...meta }) => {
+            const reqId = requestId ? `(${requestId.substring(0, 8)})` : '';
+            const comp = component ? `[${component}]` : '';
+            const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+            return `${timestamp} ${level} ${comp}${reqId} ${message}${metaStr}`;
+          })
+        )
+      }));
     }
 
-    // In a real implementation, this would also write to file, HTTP, etc.
-  }
-
-  private formatSimpleOutput(entry: LogEntry): string {
-    const timestamp = entry.timestamp.substring(11, 19); // HH:MM:SS
-    const level = entry.level.toUpperCase().padEnd(5);
-    const component = entry.component ? `[${entry.component}]` : '';
-    const requestId = entry.requestId ? `(${entry.requestId.substring(0, 8)})` : '';
-    
-    let output = `${timestamp} ${level} ${component}${requestId} ${entry.message}`;
-    
-    if (entry.meta && Object.keys(entry.meta).length > 0) {
-      output += ` ${JSON.stringify(entry.meta)}`;
+    // File transport with rotation
+    if (this.config.transports?.file?.enabled) {
+      const filename = this.config.transports.file.filename || 
+        `${logDir}/sker-daemon-%DATE%.log`;
+      
+      transports.push(new DailyRotateFile({
+        filename,
+        datePattern: this.config.transports.file.datePattern || 'YYYY-MM-DD',
+        zippedArchive: this.config.transports.file.zippedArchive || true,
+        maxSize: this.config.transports.file.maxsize || '20m',
+        maxFiles: this.config.transports.file.maxFiles || '14d',
+        level: this.config.transports.file.level || 'debug',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        )
+      }));
     }
-    
-    return output;
-  }
 
-  private formatDevOutput(entry: LogEntry): string {
-    const level = entry.level.toUpperCase();
-    const component = entry.component || 'system';
-    const meta = entry.meta ? ` ${JSON.stringify(entry.meta, null, 2)}` : '';
-    return `🔍 [${component}] ${level}: ${entry.message}${meta}`;
-  }
-
-  private formatCombinedOutput(entry: LogEntry): string {
-    return `${entry.timestamp} - ${entry.level}: ${entry.message} ${JSON.stringify({
-      component: entry.component,
-      requestId: entry.requestId,
-      userId: entry.userId,
-      meta: entry.meta
-    })}`;
-  }
-
-  private consoleOutput(level: string, message: string): void {
-    switch (level) {
-      case 'error':
-        console.error(message);
-        break;
-      case 'warn':
-        console.warn(message);
-        break;
-      case 'debug':
-        console.debug(message);
-        break;
-      default:
-        console.log(message);
+    // HTTP transport for remote logging
+    if (this.config.transports?.http?.enabled) {
+      transports.push(new winston.transports.Http({
+        host: this.config.transports.http.host,
+        port: this.config.transports.http.port,
+        path: this.config.transports.http.path,
+        ssl: this.config.transports.http.ssl || false,
+        format: winston.format.json()
+      }));
     }
+
+    return winston.createLogger({
+      level: this.config.level,
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp'] })
+      ),
+      defaultMeta: { component: this.component },
+      transports,
+      exitOnError: this.config.options?.exitOnError || false,
+      handleExceptions: this.config.options?.handleExceptions || true,
+      handleRejections: this.config.options?.handleRejections || true,
+      silent: this.config.options?.silent || false
+    });
   }
+
 
   private getDefaultConfig(): WinstonLoggerConfig {
     return {
@@ -319,7 +313,7 @@ export class WinstonLoggerFactory implements ILoggerFactory {
 
   createLogger(component: string, options?: Partial<WinstonLoggerConfig>): IWinstonLogger {
     const config = { ...this.globalConfig, ...options };
-    const logger = new MockWinstonLogger(component, config);
+    const logger = new WinstonLogger(component, config, this.projectManager);
     
     this.loggers.set(component, logger);
     return logger;
@@ -338,7 +332,7 @@ export class WinstonLoggerFactory implements ILoggerFactory {
     
     // Update existing loggers
     for (const [component, logger] of this.loggers.entries()) {
-      if (logger instanceof MockWinstonLogger) {
+      if (logger instanceof WinstonLogger) {
         (logger as any).config = this.globalConfig;
       }
     }
