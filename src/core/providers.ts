@@ -17,6 +17,8 @@ import {
   SERVICE_MANAGER,
   PROJECT_MANAGER,
   PLUGIN_MANAGER,
+  MIDDLEWARE_EXECUTOR,
+  ERROR_MANAGER,
   LOGGER,
   LOGGER_CONFIG,
   LOGGER_FACTORY,
@@ -31,6 +33,8 @@ import { ServiceManager } from './service-manager.js';
 import { ProjectManager } from './project-manager.js';
 import { PluginManager } from './plugin-manager.js';
 import { ConsoleLogger } from './console-logger.js';
+import { MiddlewareExecutor } from './middleware/index.js';
+import { ErrorManager } from './errors/index.js';
 
 /**
  * Default MCP server configuration
@@ -117,6 +121,16 @@ export function createPlatformProviders(): Provider[] {
     {
       provide: PLUGIN_MANAGER,
       useClass: PluginManager
+    },
+    
+    {
+      provide: MIDDLEWARE_EXECUTOR,
+      useClass: MiddlewareExecutor
+    },
+    
+    {
+      provide: ERROR_MANAGER,
+      useClass: ErrorManager
     },
     
     // Logger configuration provider - uses typed LoggerConfig interface

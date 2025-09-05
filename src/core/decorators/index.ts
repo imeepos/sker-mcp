@@ -7,3 +7,6 @@
 export * from './mcp-tool';
 export * from './mcp-resource';
 export * from './mcp-prompt';
+export * from './input';
+export * from './use-middleware';
+export * from './error-handler';

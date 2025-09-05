@@ -134,6 +134,16 @@ export const PROJECT_MANAGER = new InjectionToken<any>('PROJECT_MANAGER');
  */
 export const PLUGIN_MANAGER = new InjectionToken<any>('PLUGIN_MANAGER');
 
+/**
+ * Token for the middleware executor
+ */
+export const MIDDLEWARE_EXECUTOR = new InjectionToken<any>('MIDDLEWARE_EXECUTOR');
+
+/**
+ * Token for the error manager
+ */
+export const ERROR_MANAGER = new InjectionToken<any>('ERROR_MANAGER');
+
 // === Logger Tokens ===
 /**
  * Token for the main logger instance
