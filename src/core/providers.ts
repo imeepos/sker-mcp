@@ -28,6 +28,14 @@ import {
   LOGGER_CONFIG,
   LOGGER_FACTORY,
   LAYERED_LOGGER_FACTORY,
+  CONFIG_MANAGER,
+  PLUGIN_CONFIG_MANAGER,
+  CONFIGURATION_SYSTEM,
+  ENVIRONMENT_CONFIG_PROCESSOR,
+  APP_CONFIG,
+  SERVER_CONFIG,
+  LOGGING_CONFIG,
+  PLUGIN_CONFIG,
   APP_NAME,
   type McpServerConfig,
   type McpToolDefinition,
@@ -179,7 +187,10 @@ export function createPlatformProviders(): Provider[] {
     },
     
     // Plugin system providers
-    ...createPluginSystemProviders()
+    ...createPluginSystemProviders(),
+    
+    // Configuration system providers
+    ...createConfigurationProviders()
   ];
 }
 
@@ -237,6 +248,86 @@ function createPluginSystemProviders(): Provider[] {
           allowPrivilegeEscalation: false
         }
       }
+    }
+  ];
+}
+
+/**
+ * Create configuration system providers
+ */
+function createConfigurationProviders(): Provider[] {
+  return [
+    // Environment Configuration Processor provider
+    {
+      provide: ENVIRONMENT_CONFIG_PROCESSOR,
+      useFactory: () => {
+        const { EnvironmentConfigProcessor } = require('./config/environment-config.js');
+        return EnvironmentConfigProcessor;
+      }
+    },
+    
+    // Configuration Manager provider
+    {
+      provide: CONFIG_MANAGER,
+      useFactory: () => {
+        const { ConfigManager } = require('./config/config-manager.js');
+        return new ConfigManager();
+      }
+    },
+    
+    // Plugin Configuration Manager provider
+    {
+      provide: PLUGIN_CONFIG_MANAGER,
+      useFactory: (configManager: any) => {
+        const { PluginConfigManager } = require('./config/plugin-config.js');
+        return new PluginConfigManager(configManager);
+      },
+      deps: [CONFIG_MANAGER]
+    },
+    
+    // Configuration System Factory provider
+    {
+      provide: CONFIGURATION_SYSTEM,
+      useFactory: () => {
+        const { ConfigurationSystem } = require('./config/index.js');
+        return ConfigurationSystem.getInstance();
+      }
+    },
+    
+    // Application Configuration provider
+    {
+      provide: APP_CONFIG,
+      useFactory: (configSystem: any) => {
+        return configSystem.getConfig();
+      },
+      deps: [CONFIGURATION_SYSTEM]
+    },
+    
+    // Server Configuration provider
+    {
+      provide: SERVER_CONFIG,
+      useFactory: (configSystem: any) => {
+        return configSystem.getConfig().server;
+      },
+      deps: [CONFIGURATION_SYSTEM]
+    },
+    
+    // Logging Configuration provider
+    {
+      provide: LOGGING_CONFIG,
+      useFactory: (configSystem: any) => {
+        return configSystem.getConfig().logging;
+      },
+      deps: [CONFIGURATION_SYSTEM]
+    },
+    
+    // Plugin Configuration provider
+    {
+      provide: PLUGIN_CONFIG,
+      useFactory: (configSystem: any) => {
+        return configSystem.getConfig().plugins;
+      },
+      deps: [CONFIGURATION_SYSTEM]
     }
   ];
 }

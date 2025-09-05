@@ -211,3 +211,45 @@ export const PLUGIN_ISOLATION_OPTIONS = new InjectionToken<any>('PLUGIN_ISOLATIO
  * Token for Plugin System Configuration
  */
 export const PLUGIN_SYSTEM_CONFIG = new InjectionToken<any>('PLUGIN_SYSTEM_CONFIG');
+
+// === Configuration System Tokens ===
+
+/**
+ * Token for the main configuration manager
+ */
+export const CONFIG_MANAGER = new InjectionToken<any>('CONFIG_MANAGER');
+
+/**
+ * Token for plugin configuration manager
+ */
+export const PLUGIN_CONFIG_MANAGER = new InjectionToken<any>('PLUGIN_CONFIG_MANAGER');
+
+/**
+ * Token for configuration system factory
+ */
+export const CONFIGURATION_SYSTEM = new InjectionToken<any>('CONFIGURATION_SYSTEM');
+
+/**
+ * Token for environment configuration processor
+ */
+export const ENVIRONMENT_CONFIG_PROCESSOR = new InjectionToken<any>('ENVIRONMENT_CONFIG_PROCESSOR');
+
+/**
+ * Token for main application configuration
+ */
+export const APP_CONFIG = new InjectionToken<any>('APP_CONFIG');
+
+/**
+ * Token for server configuration
+ */
+export const SERVER_CONFIG = new InjectionToken<any>('SERVER_CONFIG');
+
+/**
+ * Token for logging configuration
+ */
+export const LOGGING_CONFIG = new InjectionToken<any>('LOGGING_CONFIG');
+
+/**
+ * Token for plugin configuration
+ */
+export const PLUGIN_CONFIG = new InjectionToken<any>('PLUGIN_CONFIG');

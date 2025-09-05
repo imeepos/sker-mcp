@@ -23,3 +23,6 @@ export type { AllMetadata } from './metadata-collector';
 
 // Decorators
 export * from './decorators';
+
+// Configuration system
+export * from './config';

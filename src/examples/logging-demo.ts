@@ -243,6 +243,6 @@ export async function runLoggingDemo(): Promise<void> {
 /**
  * Run demo if this file is executed directly
  */
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (typeof process !== 'undefined' && process.argv && process.argv[1] && process.argv[1].endsWith('logging-demo.ts')) {
   runLoggingDemo().catch(console.error);
 }

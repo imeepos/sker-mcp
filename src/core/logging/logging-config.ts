@@ -42,7 +42,7 @@ export interface RotationConfig {
  * Logging configuration manager
  */
 export class LoggingConfigManager {
-  private static readonly DEFAULT_LOG_DIR = path.join(os.homedir(), '.sker', 'logs');
+  static readonly DEFAULT_LOG_DIR = path.join(os.homedir(), '.sker', 'logs');
   
   /**
    * Get default rotation configuration
@@ -316,7 +316,10 @@ export const PRODUCTION_LOGGING_CONFIG: LayeredLoggerConfig = {
       zippedArchive: true
     },
     http: {
-      enabled: false // Can be configured for remote logging
+      enabled: false, // Can be configured for remote logging
+      host: 'localhost',
+      port: 3000,
+      path: '/logs'
     }
   },
   options: {
