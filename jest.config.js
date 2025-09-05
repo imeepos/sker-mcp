@@ -3,21 +3,16 @@ export default {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
+  roots: ['<rootDir>'],
   testMatch: ['**/?(*.)+(spec|test).ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: true,
-      tsconfig: {
-        target: 'ES2022',
-        module: 'ESNext',
-        moduleResolution: 'Node',
-        experimentalDecorators: true,
-        emitDecoratorMetadata: true,
-        allowSyntheticDefaultImports: true,
-        esModuleInterop: true
-      }
+      tsconfig: './tsconfig.json'
     }]
+  },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1'
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
@@ -34,10 +29,5 @@ export default {
       statements: 80
     }
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
 };

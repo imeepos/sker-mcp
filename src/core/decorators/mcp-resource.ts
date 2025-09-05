@@ -64,12 +64,12 @@ export interface McpResourceOptions {
  * }
  * ```
  */
-export function McpResource(options: McpResourceOptions): MethodDecorator {
-  return function (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+export function McpResource(options: McpResourceOptions) {
+  return function (target: any, propertyKey: string | symbol, descriptor?: PropertyDescriptor): PropertyDescriptor | void {
     // Store metadata for the resource
     Reflect.defineMetadata('mcp:resource', options, target, propertyKey);
-    
-    // Return the original descriptor unchanged
+
+    // Return the original descriptor unchanged if provided
     return descriptor;
   };
 }

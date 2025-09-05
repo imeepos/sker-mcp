@@ -16,22 +16,22 @@ export interface McpToolOptions {
    * Tool name (must be unique)
    */
   name: string;
-  
+
   /**
    * Tool description
    */
   description: string;
-  
+
   /**
    * Input schema for validation using Zod
    */
   inputSchema: z.ZodSchema<any>;
-  
+
   /**
    * Optional middleware to apply to this tool
    */
   middleware?: string[];
-  
+
   /**
    * Optional error handler method name
    */
@@ -40,10 +40,10 @@ export interface McpToolOptions {
 
 /**
  * @McpTool decorator for marking methods as MCP tools
- * 
+ *
  * @param options - Tool configuration options
  * @returns Method decorator
- * 
+ *
  * @example
  * ```typescript
  * class MyService {
@@ -59,12 +59,12 @@ export interface McpToolOptions {
  * }
  * ```
  */
-export function McpTool(options: McpToolOptions): MethodDecorator {
-  return function (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+export const McpTool = (options: McpToolOptions): MethodDecorator => {
+  return function <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) {
     // Store metadata for the tool
     Reflect.defineMetadata('mcp:tool', options, target, propertyKey);
-    
-    // Return the original descriptor unchanged
+
+    // Return the original descriptor unchanged if provided
     return descriptor;
   };
 }

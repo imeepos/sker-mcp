@@ -16,22 +16,22 @@ export interface McpPromptOptions {
    * Prompt name (must be unique)
    */
   name: string;
-  
+
   /**
    * Prompt description
    */
   description: string;
-  
+
   /**
    * Optional arguments schema for the prompt using Zod
    */
   arguments?: z.ZodSchema<any>;
-  
+
   /**
    * Optional middleware to apply to this prompt
    */
   middleware?: string[];
-  
+
   /**
    * Optional error handler method name
    */
@@ -66,12 +66,11 @@ export interface McpPromptOptions {
  * }
  * ```
  */
-export function McpPrompt(options: McpPromptOptions): MethodDecorator {
-  return function (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+export const McpPrompt = (options: McpPromptOptions) => {
+  return function (target: any, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor | void {
     // Store metadata for the prompt
     Reflect.defineMetadata('mcp:prompt', options, target, propertyKey);
-    
-    // Return the original descriptor unchanged
+    // Return the original descriptor unchanged if provided
     return descriptor;
   };
 }

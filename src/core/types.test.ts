@@ -1,7 +1,7 @@
 describe('Core Type Definitions', () => {
   describe('MCP Interface Types', () => {
     it('should_export_IMcpTool_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       // We can't directly test interface existence in runtime, 
       // but we can test the module exports
@@ -9,13 +9,13 @@ describe('Core Type Definitions', () => {
     });
 
     it('should_export_IMcpResource_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
 
     it('should_export_IMcpPrompt_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
@@ -23,13 +23,13 @@ describe('Core Type Definitions', () => {
 
   describe('Plugin Interface Types', () => {
     it('should_export_IPlugin_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
 
     it('should_export_IPluginManager_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
@@ -37,7 +37,7 @@ describe('Core Type Definitions', () => {
 
   describe('Configuration Interface Types', () => {
     it('should_export_IMcpServerConfig_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
@@ -45,19 +45,19 @@ describe('Core Type Definitions', () => {
 
   describe('Metadata Interface Types', () => {
     it('should_export_ToolMetadata_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
 
     it('should_export_ResourceMetadata_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
 
     it('should_export_PromptMetadata_interface', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
@@ -65,7 +65,7 @@ describe('Core Type Definitions', () => {
 
   describe('Enum Types', () => {
     it('should_export_PluginStatus_enum', async () => {
-      const { PluginStatus } = await import('../../src/core/types');
+      const { PluginStatus } = await import('./types');
       
       expect(typeof PluginStatus).toBe('object');
       expect(PluginStatus.LOADING).toBeDefined();
@@ -75,7 +75,7 @@ describe('Core Type Definitions', () => {
     });
 
     it('should_have_correct_PluginStatus_values', async () => {
-      const { PluginStatus } = await import('../../src/core/types');
+      const { PluginStatus } = await import('./types');
       
       expect(PluginStatus.LOADING).toBe('loading');
       expect(PluginStatus.LOADED).toBe('loaded');
@@ -86,7 +86,7 @@ describe('Core Type Definitions', () => {
 
   describe('Type Utility Functions', () => {
     it('should_export_type_guard_functions', async () => {
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       // Test that utility functions exist if they are exported
       expect(typeof types).toBe('object');
@@ -96,14 +96,14 @@ describe('Core Type Definitions', () => {
   describe('Type Compatibility', () => {
     it('should_be_compatible_with_MCP_SDK_types', async () => {
       // Test that our types are compatible with @modelcontextprotocol/sdk
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
 
     it('should_support_Zod_validation', async () => {
       // Test that types can be used with Zod schemas
-      const types = await import('../../src/core/types');
+      const types = await import('./types');
       
       expect(typeof types).toBe('object');
     });
