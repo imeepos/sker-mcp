@@ -130,7 +130,7 @@ export class LoggingConfigManager {
           level: LoggingConfigManager.getLayerFileLevel(layer),
           filename: LoggingConfigManager.getLayerFileName(layer, logDir),
           maxsize: LoggingConfigManager.parseFileSize(rotation.maxSize),
-          maxFiles: rotation.maxFiles,
+          maxFiles: LoggingConfigManager.parseMaxFiles(rotation.maxFiles),
           datePattern: rotation.datePattern,
           zippedArchive: rotation.zippedArchive
         }
@@ -290,6 +290,32 @@ export class LoggingConfigManager {
 
     // Default to bytes if parsing fails
     return parseInt(size, 10) || 20971520; // 20MB default
+  }
+
+  /**
+   * Parse maxFiles value to number for Winston compatibility
+   */
+  private static parseMaxFiles(maxFiles: number | string): number {
+    if (typeof maxFiles === 'number') {
+      return maxFiles;
+    }
+
+    // Handle string values like '7d', '14d', etc.
+    if (typeof maxFiles === 'string') {
+      const match = maxFiles.match(/^(\d+)d?$/i);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+
+      // Try to parse as number
+      const parsed = parseInt(maxFiles, 10);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    // Default fallback
+    return 14;
   }
 }
 

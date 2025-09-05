@@ -79,8 +79,8 @@ export class LayeredWinstonLogger extends WinstonLogger {
     projectManager?: ProjectManager
   ): WinstonLoggerConfig {
     const config = { ...baseConfig };
-    const logDir = projectManager 
-      ? path.join(projectManager.getProjectRoot(), 'logs')
+    const logDir = projectManager
+      ? path.join(projectManager.getHomeDirectory(), 'logs')
       : path.join(process.cwd(), 'logs');
 
     // Configure file transport based on layer
