@@ -34,6 +34,14 @@ import type {
   IMcpPrompt, 
   IMcpServerConfig 
 } from './types.js';
+import { ServicePreBindingManager } from './service-prebinding.js';
+import type {
+  PreBoundTool,
+  PreBoundResource,
+  PreBoundPrompt,
+  PreBindingOptions
+} from './service-prebinding.js';
+import type { IsolatedPluginInstance } from './plugins/index.js';
 
 /**
  * Service manager status enumeration
@@ -69,6 +77,10 @@ export class ServiceManager {
   private registeredTools = new Map<string, IMcpTool>();
   private registeredResources = new Map<string, IMcpResource>();
   private registeredPrompts = new Map<string, IMcpPrompt>();
+  private preBoundTools = new Map<string, PreBoundTool>();
+  private preBoundResources = new Map<string, PreBoundResource>();
+  private preBoundPrompts = new Map<string, PreBoundPrompt>();
+  private preBindingManager: ServicePreBindingManager;
 
   constructor(
     @Inject(MCP_TOOLS) private tools: IMcpTool[],
@@ -94,6 +106,9 @@ export class ServiceManager {
       }
     );
 
+    // Initialize service pre-binding manager
+    this.preBindingManager = new ServicePreBindingManager(this.logger);
+    
     this.setupServerHandlers();
   }
 
@@ -282,19 +297,27 @@ export class ServiceManager {
   }
 
   /**
-   * Gets information about registered components
+   * Gets enhanced information about registered components including pre-bound services
    */
   getRegistrationInfo(): {
     tools: string[];
     resources: string[];
     prompts: string[];
+    preBoundTools: string[];
+    preBoundResources: string[];
+    preBoundPrompts: string[];
     status: ServiceManagerStatus;
+    preBindingMetrics: any;
   } {
     return {
       tools: Array.from(this.registeredTools.keys()),
       resources: Array.from(this.registeredResources.keys()),
       prompts: Array.from(this.registeredPrompts.keys()),
-      status: this.status
+      preBoundTools: Array.from(this.preBoundTools.keys()),
+      preBoundResources: Array.from(this.preBoundResources.keys()),
+      preBoundPrompts: Array.from(this.preBoundPrompts.keys()),
+      status: this.status,
+      preBindingMetrics: this.preBindingManager.getPerformanceMetrics()
     };
   }
 
@@ -605,6 +628,154 @@ export class ServiceManager {
     // Simple exact match for now
     // In the future, this could support URI templates with parameters
     return resourceUri === requestUri;
+  }
+
+  /**
+   * Register pre-bound services from an isolated plugin instance
+   */
+  async registerPluginPreBoundServices(
+    isolatedInstance: IsolatedPluginInstance,
+    options: PreBindingOptions = {}
+  ): Promise<{
+    tools: PreBoundTool[];
+    resources: PreBoundResource[];
+    prompts: PreBoundPrompt[];
+  }> {
+    try {
+      this.logger?.info('Registering pre-bound services from plugin', {
+        plugin: isolatedInstance.plugin.name,
+        version: isolatedInstance.plugin.version
+      });
+
+      const preBoundServices = await this.preBindingManager.createPreBoundServicesFromPlugin(
+        isolatedInstance,
+        options
+      );
+
+      // Register pre-bound tools
+      for (const tool of preBoundServices.tools) {
+        this.preBoundTools.set(tool.name, tool);
+        // Also register as regular tool so it appears in listings
+        this.registeredTools.set(tool.name, tool);
+      }
+
+      // Register pre-bound resources
+      for (const resource of preBoundServices.resources) {
+        this.preBoundResources.set(resource.uri, resource);
+        this.registeredResources.set(resource.uri, resource);
+      }
+
+      // Register pre-bound prompts
+      for (const prompt of preBoundServices.prompts) {
+        this.preBoundPrompts.set(prompt.name, prompt);
+        this.registeredPrompts.set(prompt.name, prompt);
+      }
+
+      this.logger?.info('Pre-bound services registered successfully', {
+        plugin: isolatedInstance.plugin.name,
+        tools: preBoundServices.tools.length,
+        resources: preBoundServices.resources.length,
+        prompts: preBoundServices.prompts.length
+      });
+
+      return preBoundServices;
+
+    } catch (error) {
+      this.logger?.error('Failed to register pre-bound services', {
+        plugin: isolatedInstance.plugin.name,
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Unregister pre-bound services for a plugin
+   */
+  async unregisterPluginPreBoundServices(pluginName: string): Promise<void> {
+    try {
+      this.logger?.debug('Unregistering pre-bound services for plugin', { pluginName });
+
+      // Remove pre-bound tools
+      const toolsToRemove: string[] = [];
+      for (const [name, tool] of this.preBoundTools.entries()) {
+        if (tool.boundService.pluginName === pluginName) {
+          toolsToRemove.push(name);
+        }
+      }
+
+      // Remove pre-bound resources
+      const resourcesToRemove: string[] = [];
+      for (const [uri, resource] of this.preBoundResources.entries()) {
+        if (resource.boundService.pluginName === pluginName) {
+          resourcesToRemove.push(uri);
+        }
+      }
+
+      // Remove pre-bound prompts
+      const promptsToRemove: string[] = [];
+      for (const [name, prompt] of this.preBoundPrompts.entries()) {
+        if (prompt.boundService.pluginName === pluginName) {
+          promptsToRemove.push(name);
+        }
+      }
+
+      // Clean up registrations
+      for (const name of toolsToRemove) {
+        this.preBoundTools.delete(name);
+        this.registeredTools.delete(name);
+      }
+
+      for (const uri of resourcesToRemove) {
+        this.preBoundResources.delete(uri);
+        this.registeredResources.delete(uri);
+      }
+
+      for (const name of promptsToRemove) {
+        this.preBoundPrompts.delete(name);
+        this.registeredPrompts.delete(name);
+      }
+
+      // Clear from pre-binding manager
+      await this.preBindingManager.clearPluginServices(pluginName);
+
+      this.logger?.info('Pre-bound services unregistered', {
+        plugin: pluginName,
+        toolsRemoved: toolsToRemove.length,
+        resourcesRemoved: resourcesToRemove.length,
+        promptsRemoved: promptsToRemove.length
+      });
+
+    } catch (error) {
+      this.logger?.error('Failed to unregister pre-bound services', {
+        plugin: pluginName,
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get pre-binding performance metrics
+   */
+  getPreBindingMetrics(): any {
+    return this.preBindingManager.getPerformanceMetrics();
+  }
+
+  /**
+   * Check if a service is pre-bound
+   */
+  isServicePreBound(type: 'tool' | 'resource' | 'prompt', identifier: string): boolean {
+    switch (type) {
+      case 'tool':
+        return this.preBoundTools.has(identifier);
+      case 'resource':
+        return this.preBoundResources.has(identifier);
+      case 'prompt':
+        return this.preBoundPrompts.has(identifier);
+      default:
+        return false;
+    }
   }
 
   /**
