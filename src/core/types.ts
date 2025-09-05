@@ -380,3 +380,144 @@ export type PluginConfig = Record<string, any>;
  * Service instance registry type
  */
 export type ServiceInstanceRegistry = Map<ServiceConstructor, any>;
+
+// ==================== Feature Injector Types ====================
+
+/**
+ * Plugin isolation levels
+ */
+export enum IsolationLevel {
+  /** No isolation - direct access to parent container */
+  NONE = 'none',
+  /** Service isolation - separate service instances */
+  SERVICE = 'service', 
+  /** Full isolation - completely separate container */
+  FULL = 'full'
+}
+
+/**
+ * Plugin resource access permissions
+ */
+export interface PluginPermissions {
+  /** Can access parent container services */
+  parentServices: boolean;
+  /** Can register global services */
+  globalRegistration: boolean;
+  /** Can access other plugins */
+  crossPluginAccess: boolean;
+  /** Can modify core system services */
+  coreSystemAccess: boolean;
+  /** Custom permission flags */
+  custom?: Record<string, boolean>;
+}
+
+/**
+ * Plugin isolation configuration options
+ */
+export interface PluginIsolationOptions {
+  /** Level of isolation to apply */
+  isolationLevel?: IsolationLevel;
+  /** Plugin permissions */
+  permissions?: Partial<PluginPermissions>;
+  /** Custom configuration */
+  custom?: Record<string, any>;
+}
+
+/**
+ * Plugin execution context
+ */
+export interface PluginContext {
+  /** Plugin information */
+  plugin: IPlugin;
+  /** Plugin working directory */
+  workingDirectory: string;
+  /** Plugin configuration */
+  config: PluginConfig;
+  /** Environment variables */
+  environment: Record<string, string>;
+}
+
+/**
+ * Communication bridge between parent and child containers
+ */
+export interface PluginCommunicationBridge {
+  /** Request service from parent container */
+  requestFromParent<T>(token: any): Promise<T | null>;
+  /** Provide service to parent container */
+  provideToParent<T>(token: any, provider: any): Promise<void>;
+  /** Get service from child container */
+  getFromChild<T>(token: any): Promise<T | null>;
+  /** Send message between containers */
+  sendMessage(target: 'parent' | 'child', message: any): Promise<any>;
+}
+
+/**
+ * Container interface for dependency injection
+ */
+export interface Container {
+  /** DI injector instance */
+  injector?: any;
+  /** Container providers */
+  providers: any[];
+  /** Optional dispose method */
+  dispose?(): Promise<void>;
+}
+
+/**
+ * Isolated plugin instance
+ */
+export interface IsolatedPluginInstance {
+  /** Original plugin */
+  readonly plugin: IPlugin;
+  /** Isolated container */
+  readonly container: Container;
+  /** Isolated injector */
+  readonly injector: any;
+  /** Communication bridge */
+  readonly bridge: PluginCommunicationBridge;
+  /** Plugin permissions */
+  readonly permissions: PluginPermissions;
+  /** Isolation level */
+  readonly isolationLevel: IsolationLevel;
+  
+  /** Get service from plugin's isolated container */
+  getService<T>(token: any): Promise<T>;
+  /** Check if plugin has specific permission */
+  hasPermission(permission: keyof PluginPermissions): boolean;
+  /** Destroy the isolated plugin instance */
+  destroy(): Promise<void>;
+}
+
+/**
+ * Feature Injector interface for plugin isolation
+ */
+export interface IFeatureInjector {
+  /** Create isolated plugin instance */
+  createIsolatedPlugin(plugin: IPlugin, options?: PluginIsolationOptions): Promise<IsolatedPluginInstance>;
+  /** Get isolated plugin instance */
+  getIsolatedPlugin(pluginName: string, version?: string): IsolatedPluginInstance | null;
+  /** List all isolated plugins */
+  listIsolatedPlugins(): IsolatedPluginInstance[];
+  /** Remove isolated plugin */
+  removeIsolatedPlugin(pluginName: string, version?: string): Promise<boolean>;
+  /** Get isolation statistics */
+  getIsolationStats(): {
+    totalIsolatedPlugins: number;
+    isolationLevels: Record<IsolationLevel, number>;
+    memoryUsage?: number;
+  };
+  /** Cleanup all isolated plugins */
+  cleanup(): Promise<void>;
+}
+
+/**
+ * Enhanced plugin interface with providers support
+ */
+export interface IEnhancedPlugin extends IPlugin {
+  /** Dependency injection providers for the plugin */
+  providers?: any[];
+  /** Plugin trust level */
+  trustLevel?: 'untrusted' | 'trusted' | 'system';
+  /** Plugin isolation configuration */
+  isolationConfig?: PluginIsolationOptions;
+}

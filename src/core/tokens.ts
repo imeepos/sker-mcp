@@ -184,3 +184,25 @@ export const APP_VERSION: StringToken<string> = 'APP_VERSION' as StringToken<str
  * Example SymbolToken - useful for unique identifiers with type safety
  */
 export const DEBUG_MODE: SymbolToken<boolean> = Symbol('DEBUG_MODE') as SymbolToken<boolean>;
+
+// === Plugin System Tokens ===
+
+/**
+ * Token for Feature Injector service
+ */
+export const FEATURE_INJECTOR = new InjectionToken<any>('FEATURE_INJECTOR');
+
+/**
+ * Token for Plugin Conflict Detector service  
+ */
+export const PLUGIN_CONFLICT_DETECTOR = new InjectionToken<any>('PLUGIN_CONFLICT_DETECTOR');
+
+/**
+ * Token for Plugin Isolation Options
+ */
+export const PLUGIN_ISOLATION_OPTIONS = new InjectionToken<any>('PLUGIN_ISOLATION_OPTIONS');
+
+/**
+ * Token for Plugin System Configuration
+ */
+export const PLUGIN_SYSTEM_CONFIG = new InjectionToken<any>('PLUGIN_SYSTEM_CONFIG');

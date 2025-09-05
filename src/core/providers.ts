@@ -9,6 +9,7 @@
  */
 
 import type { Provider } from '@sker/di';
+import { Injector } from '@sker/di';
 import {
   MCP_SERVER_CONFIG,
   MCP_TOOLS,
@@ -18,6 +19,10 @@ import {
   PROJECT_MANAGER,
   PLUGIN_MANAGER,
   MIDDLEWARE_EXECUTOR,
+  FEATURE_INJECTOR,
+  PLUGIN_CONFLICT_DETECTOR,
+  PLUGIN_ISOLATION_OPTIONS,
+  PLUGIN_SYSTEM_CONFIG,
   ERROR_MANAGER,
   LOGGER,
   LOGGER_CONFIG,
@@ -153,20 +158,85 @@ export function createPlatformProviders(): Provider[] {
       } as LoggerConfig
     },
     
-    // Logger factory provider - placeholder for now
+    // Winston Logger Factory provider
     {
       provide: LOGGER_FACTORY,
-      useClass: class LoggerFactoryPlaceholder {
-        constructor() {
-          // Placeholder implementation
+      useFactory: (config: any, projectManager: any) => {
+        const { WinstonLoggerFactory } = require('./logging/winston-logger.js');
+        return new WinstonLoggerFactory(config, projectManager);
+      },
+      deps: [LOGGER_CONFIG, PROJECT_MANAGER]
+    },
+    
+    // Main logger provider - using Winston logger
+    {
+      provide: LOGGER,
+      useFactory: (loggerFactory: any) => {
+        const factory = loggerFactory as any;
+        return factory.createLogger('system');
+      },
+      deps: [LOGGER_FACTORY]
+    },
+    
+    // Plugin system providers
+    ...createPluginSystemProviders()
+  ];
+}
+
+/**
+ * Create plugin system providers
+ */
+function createPluginSystemProviders(): Provider[] {
+  return [
+    // Feature Injector provider
+    {
+      provide: FEATURE_INJECTOR,
+      useFactory: (injector: any) => {
+        const { FeatureInjector } = require('./plugins/feature-injector.js');
+        return new FeatureInjector(injector);
+      },
+      deps: [Injector]
+    },
+    
+    // Plugin Conflict Detector provider
+    {
+      provide: PLUGIN_CONFLICT_DETECTOR,
+      useFactory: (logger: any) => {
+        const { PluginConflictDetector } = require('./plugins/conflict-detector.js');
+        return new PluginConflictDetector(logger);
+      },
+      deps: [LOGGER]
+    },
+    
+    // Plugin Isolation Options provider
+    {
+      provide: PLUGIN_ISOLATION_OPTIONS,
+      useValue: {
+        isolationLevel: 'service',
+        permissions: {
+          parentServices: false,
+          globalRegistration: false,
+          crossPluginAccess: false,
+          coreSystemAccess: false
         }
       }
     },
     
-    // Main logger provider - using console logger
+    // Plugin System Configuration provider
     {
-      provide: LOGGER,
-      useClass: ConsoleLogger
+      provide: PLUGIN_SYSTEM_CONFIG,
+      useValue: {
+        conflictDetection: {
+          enabled: true,
+          strategies: ['tool_name', 'resource_uri', 'prompt_name', 'service_class'],
+          defaultResolution: 'manual',
+          pluginPriorities: []
+        },
+        isolation: {
+          defaultLevel: 'service',
+          allowPrivilegeEscalation: false
+        }
+      }
     }
   ];
 }
