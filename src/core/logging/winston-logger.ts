@@ -202,8 +202,8 @@ export class WinstonLogger implements IWinstonLogger {
 
   private createWinstonInstance(): winston.Logger {
     const transports: winston.transport[] = [];
-    const logDir = this.projectManager 
-      ? path.join(this.projectManager.getProjectRoot(), 'logs')
+    const logDir = this.projectManager
+      ? path.join(this.projectManager.getHomeDirectory(), 'logs')
       : path.join(process.cwd(), 'logs');
 
     // Console transport

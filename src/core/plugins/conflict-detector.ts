@@ -6,6 +6,7 @@
  * conflicts between plugins and provides strategies for resolution.
  */
 
+import 'reflect-metadata';
 import { Injectable, Inject } from '@sker/di';
 import { LOGGER } from '../tokens.js';
 import type {
@@ -673,12 +674,30 @@ export class PluginConflictDetector {
   }
 
   /**
-   * Mock method to extract tools from service (would integrate with metadata collector)
+   * Extract actual tool names from service class using metadata collector
    */
   private extractMockToolsFromService(serviceClass: any): string[] {
-    // In real implementation, this would use the metadata collector
-    // to extract tool names from decorated methods
-    return [`mock_tool_${serviceClass.name}`];
+    if (!serviceClass || !serviceClass.prototype) {
+      return [];
+    }
+
+    const toolNames: string[] = [];
+    const prototype = serviceClass.prototype;
+
+    // Get all property names from the prototype
+    const propertyNames = Object.getOwnPropertyNames(prototype);
+
+    for (const propertyName of propertyNames) {
+      if (typeof prototype[propertyName] === 'function' && propertyName !== 'constructor') {
+        // Check if this method has MCP tool metadata
+        const metadata = Reflect.getMetadata('mcp:tool', prototype, propertyName);
+        if (metadata && metadata.name) {
+          toolNames.push(metadata.name);
+        }
+      }
+    }
+
+    return toolNames;
   }
 }
 
