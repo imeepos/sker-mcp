@@ -190,26 +190,49 @@ describe('System Integration Tests', () => {
     };
 
     // Initialize core services
+    const mockLogger = {
+      debug: console.log,
+      info: console.log,
+      warn: console.warn,
+      error: console.error,
+      trace: console.log
+    };
+
     serviceManager = new (require('../service-manager.js').ServiceManager)(
-      { name: 'test-server', version: '1.0.0' }, // Mock config
-      [], [], [], // Mock tools, resources, prompts
-      null, null, null // Mock dependencies
+      [], // Mock tools
+      [], // Mock resources
+      [], // Mock prompts
+      { // Mock config
+        name: 'test-server',
+        version: '1.0.0',
+        transport: { type: 'stdio' },
+        capabilities: { tools: {}, resources: {}, prompts: {} }
+      },
+      mockLogger // Mock logger
     );
 
+    const mockProjectManager = {
+      getHomeDirectory: () => '/test/home',
+      getPluginsDirectory: () => '/test/plugins',
+      getConfigDirectory: () => '/test/config',
+      getLogsDirectory: () => '/test/logs',
+      ensureDirectoryExists: jest.fn().mockResolvedValue(undefined),
+      pluginDirectoryExists: jest.fn().mockResolvedValue(true),
+      hasValidPluginPackageJson: jest.fn().mockResolvedValue(true)
+    };
+
     pluginManager = new (require('../plugin-manager.js').PluginManager)(
-      null, // Mock project manager
-      { debug: console.log, info: console.log, warn: console.warn, error: console.error }
+      mockProjectManager,
+      mockLogger
     );
 
     featureInjector = new FeatureInjector(mockContainer as any);
-    conflictDetector = new PluginConflictDetector(
-      { debug: console.log, info: console.log, warn: console.warn, error: console.error }
-    );
+    conflictDetector = new PluginConflictDetector(mockLogger);
 
     mcpApp = new (require('../mcp-application.js').McpApplication)(
       serviceManager,
       pluginManager,
-      { debug: console.log, info: console.log, warn: console.warn, error: console.error }
+      mockLogger
     );
   });
 

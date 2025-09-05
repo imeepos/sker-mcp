@@ -39,7 +39,7 @@ describe('PluginManager', () => {
   describe('Constructor and Initialization', () => {
     it('should_create_instance_with_dependencies', () => {
       expect(pluginManager).toBeInstanceOf(PluginManager);
-      expect(mockLogger.debug).toHaveBeenCalledWith('PluginManager initialized (basic implementation)');
+      expect(mockLogger.debug).toHaveBeenCalledWith('PluginManager initialized with Feature Injector architecture');
     });
 
     it('should_initialize_successfully', async () => {
@@ -48,10 +48,7 @@ describe('PluginManager', () => {
       await pluginManager.initialize();
 
       expect(mockProjectManager.ensureDirectoryExists).toHaveBeenCalledWith('/test/plugins');
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'PluginManager initialized successfully',
-        { pluginsDirectory: '/test/plugins' }
-      );
+      expect(mockLogger.info).toHaveBeenCalledWith('Initializing PluginManager with Feature Injector architecture');
     });
 
     it('should_handle_initialization_errors', async () => {
