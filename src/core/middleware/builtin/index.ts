@@ -6,12 +6,44 @@
  */
 
 // Import middleware classes for local use in factory methods
-import { LoggingMiddleware as LoggingMW, QuietLoggingMiddleware, VerboseLoggingMiddleware, ErrorOnlyLoggingMiddleware, LoggingMiddlewareOptions } from './logging-middleware.js';
-import { ValidationMiddleware as ValidationMW, StrictValidationMiddleware, LenientValidationMiddleware, ValidationMiddlewareOptions } from './validation-middleware.js';
-import { CacheMiddleware as CacheMW, ShortTermCacheMiddleware, LongTermCacheMiddleware, CacheMiddlewareOptions } from './cache-middleware.js';
-import { AuthenticationMiddleware as AuthMW, OptionalAuthenticationMiddleware, StrictAuthenticationMiddleware, AuthenticationMiddlewareOptions } from './authentication-middleware.js';
-import { PerformanceMiddleware as PerfMW, LightweightPerformanceMiddleware, DetailedPerformanceMiddleware, PerformanceMiddlewareOptions } from './performance-middleware.js';
-import { ErrorHandlingMiddleware as ErrorMW, DevelopmentErrorHandlingMiddleware, ProductionErrorHandlingMiddleware, ResilientErrorHandlingMiddleware, ErrorHandlingMiddlewareOptions } from './error-handling-middleware.js';
+import {
+  LoggingMiddleware,
+  QuietLoggingMiddleware,
+  VerboseLoggingMiddleware,
+  ErrorOnlyLoggingMiddleware,
+  LoggingMiddlewareOptions
+} from './logging-middleware.js';
+import {
+  ValidationMiddleware,
+  StrictValidationMiddleware,
+  LenientValidationMiddleware,
+  ValidationMiddlewareOptions
+} from './validation-middleware.js';
+import {
+  CacheMiddleware,
+  ShortTermCacheMiddleware,
+  LongTermCacheMiddleware,
+  CacheMiddlewareOptions
+} from './cache-middleware.js';
+import {
+  AuthenticationMiddleware,
+  OptionalAuthenticationMiddleware,
+  StrictAuthenticationMiddleware,
+  AuthenticationMiddlewareOptions
+} from './authentication-middleware.js';
+import {
+  PerformanceMiddleware,
+  LightweightPerformanceMiddleware,
+  DetailedPerformanceMiddleware,
+  PerformanceMiddlewareOptions
+} from './performance-middleware.js';
+import {
+  ErrorHandlingMiddleware,
+  DevelopmentErrorHandlingMiddleware,
+  ProductionErrorHandlingMiddleware,
+  ResilientErrorHandlingMiddleware,
+  ErrorHandlingMiddlewareOptions
+} from './error-handling-middleware.js';
 
 // Logging Middleware
 export {
@@ -114,27 +146,27 @@ export class BuiltinMiddlewareFactory {
 
     // Add middlewares in execution order (by priority)
     if (options.authentication !== false) {
-      middlewares.push(AuthMW);
+      middlewares.push(AuthenticationMiddleware);
     }
-    
+
     if (options.validation !== false) {
-      middlewares.push(ValidationMW);
+      middlewares.push(ValidationMiddleware);
     }
-    
+
     if (options.caching !== false) {
-      middlewares.push(CacheMW);
+      middlewares.push(CacheMiddleware);
     }
-    
+
     if (options.logging !== false) {
-      middlewares.push(LoggingMW);
+      middlewares.push(LoggingMiddleware);
     }
-    
+
     if (options.performance !== false) {
-      middlewares.push(PerfMW);
+      middlewares.push(PerformanceMiddleware);
     }
-    
+
     if (options.errorHandling !== false) {
-      middlewares.push(ErrorMW);
+      middlewares.push(ErrorHandlingMiddleware);
     }
 
     return middlewares;
@@ -199,7 +231,7 @@ export class BuiltinMiddlewareFactory {
   static createMinimalStack(): Array<new (...args: any[]) => any> {
     return [
       ErrorOnlyLoggingMiddleware,
-      ErrorMW
+      ErrorHandlingMiddleware
     ];
   }
 }
