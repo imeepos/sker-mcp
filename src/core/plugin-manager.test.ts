@@ -337,8 +337,15 @@ describe('PluginManager', () => {
 
   describe('Error Handling', () => {
     it('should_handle_null_logger_gracefully', () => {
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn()
+      };
       expect(() => {
-        new PluginManager(mockProjectManager, null);
+        new PluginManager(mockProjectManager, mockLogger as any);
       }).not.toThrow();
     });
 
