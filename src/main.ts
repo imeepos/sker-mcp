@@ -28,17 +28,17 @@ interface AppConfig {
    * Debug mode flag
    */
   debug: boolean;
-  
+
   /**
    * Log level override
    */
   logLevel: string;
-  
+
   /**
    * Custom config file path
    */
   configFile?: string;
-  
+
   /**
    * Custom home directory
    */
@@ -72,7 +72,7 @@ class MainApplication {
       debug: process.env.DEBUG === 'true' || process.env.NODE_ENV === 'development',
       logLevel: process.env.LOG_LEVEL || 'info'
     };
-    
+
     // Add optional properties if they exist
     if (process.env.CONFIG_FILE) {
       this.config.configFile = process.env.CONFIG_FILE;
@@ -85,13 +85,13 @@ class MainApplication {
     const args = process.argv.slice(2);
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
-      
+
       switch (arg) {
         case '--debug':
         case '-d':
           this.config.debug = true;
           break;
-          
+
         case '--log-level':
           if (i + 1 < args.length) {
             const nextLevel = args[++i];
@@ -100,7 +100,7 @@ class MainApplication {
             }
           }
           break;
-          
+
         case '--config':
         case '-c':
           if (i + 1 < args.length) {
@@ -110,7 +110,7 @@ class MainApplication {
             }
           }
           break;
-          
+
         case '--home':
           if (i + 1 < args.length) {
             const nextHome = args[++i];
@@ -119,7 +119,7 @@ class MainApplication {
             }
           }
           break;
-          
+
         case '--help':
           this.showHelp();
           process.exit(0);
@@ -161,7 +161,7 @@ Examples:
    */
   private setupDependencyInjection(): void {
     console.log('Setting up dependency injection...');
-    
+
     // Create injector with all providers
     const providers = [
       ...createMcpProviders(),
@@ -169,7 +169,7 @@ Examples:
     ];
 
     this.injector = createPlatformInjector(providers);
-    
+
     console.log('Dependency injection configured successfully');
   }
 
@@ -186,7 +186,7 @@ Examples:
     try {
       // Create the main application instance
       this.application = this.injector.get(McpApplication);
-      
+
       if (!this.application) {
         throw new Error('Failed to create McpApplication instance');
       }
@@ -214,11 +214,11 @@ Examples:
 
     try {
       await this.application.start();
-      
+
       console.log('✅ Sker Daemon MCP Server is running');
       console.log('📡 Transport: stdio');
       console.log('📁 Home directory:', process.env.SKER_HOME_DIR || '~/.sker');
-      
+
       if (this.config.debug) {
         console.log('🐛 Debug mode is enabled');
       }
@@ -238,7 +238,7 @@ Examples:
   private keepAlive(): void {
     // The process will stay alive due to the MCP server's stdio transport
     // This method exists for any additional keep-alive logic if needed
-    
+
     // Log periodic status (in debug mode only)
     if (this.config.debug) {
       const statusInterval = setInterval(() => {
@@ -257,12 +257,12 @@ Examples:
   async run(): Promise<void> {
     try {
       console.log('🚀 Starting Sker Daemon MCP Server...');
-      
+
       // Apply environment variable overrides
       if (this.config.homeDir) {
         process.env.SKER_HOME_DIR = this.config.homeDir;
       }
-      
+
       // Set debug mode
       if (this.config.debug) {
         process.env.DEBUG = 'true';
@@ -280,7 +280,7 @@ Examples:
 
     } catch (error) {
       console.error('💥 Fatal error during startup:', error);
-      
+
       // Try to cleanup if possible
       if (this.application) {
         try {
@@ -320,9 +320,7 @@ async function main(): Promise<void> {
 }
 
 // Only run if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error('💥 Main execution failed:', error);
-    process.exit(1);
-  });
-}
+main().catch((error) => {
+  console.error('💥 Main execution failed:', error);
+  process.exit(1);
+});
