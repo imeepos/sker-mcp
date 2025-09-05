@@ -7,6 +7,7 @@
 
 export * from './types.js';
 export * from './middleware-executor.js';
+export * from './builtin/index.js';
 
 // Re-export commonly used types for convenience
 export type {
@@ -21,3 +22,6 @@ export type {
 
 // Re-export the main executor class
 export { MiddlewareExecutor } from './middleware-executor.js';
+
+// Re-export built-in middleware factory and presets for convenience
+export { BuiltinMiddlewareFactory, MiddlewarePresets } from './builtin/index.js';
