@@ -5,27 +5,27 @@
  * conflict detection, plugin isolation, and communication bridge functionality.
  */
 
-import { z } from 'zod';
+
 import { Injectable } from '@sker/di';
 import { 
   FeatureInjector, 
   IsolationLevel, 
   PluginIsolationUtils 
 } from '../plugins/feature-injector.js';
-import { 
+import {
   PluginConflictDetector,
   ConflictType,
   ConflictSeverity,
   ResolutionStrategy,
-  BuiltinConflictRules
+  BuiltinConflictRules,
+  type PluginConflict
 } from '../plugins/conflict-detector.js';
-import { McpTool, Input } from '../decorators/index.js';
+import { McpTool } from '../decorators/index.js';
 import type {
   IPlugin,
   IEnhancedPlugin,
   PluginIsolationOptions,
   PluginPermissions,
-  PluginConflict,
   IsolatedPluginInstance
 } from '../types.js';
 import type { CallToolRequest } from '@modelcontextprotocol/sdk/types.js';
@@ -40,9 +40,9 @@ class PluginServiceA {
     description: 'Tool from plugin A'
   })
   async toolA(
-    @Input({ schema: z.string(), description: 'Input for tool A' }) _input: string
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     return { result: `Plugin A processed: ${input}`, plugin: 'A' };
   }
 
@@ -51,9 +51,9 @@ class PluginServiceA {
     description: 'Shared tool name from plugin A'
   })
   async sharedTool(
-    @Input({ schema: z.string(), description: 'Shared input' }) _input: string
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     return { result: `Plugin A shared: ${input}`, plugin: 'A' };
   }
 
@@ -72,9 +72,9 @@ class PluginServiceB {
     description: 'Tool from plugin B'
   })
   async toolB(
-    @Input({ schema: z.number(), description: 'Input for tool B' }) _input: number
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     return { result: `Plugin B processed: ${input * 2}`, plugin: 'B' };
   }
 
@@ -83,9 +83,9 @@ class PluginServiceB {
     description: 'Shared tool name from plugin B'
   })
   async sharedTool(
-    @Input({ schema: z.number(), description: 'Shared numeric input' }) _input: number
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     return { result: `Plugin B shared: ${input}`, plugin: 'B' };
   }
 
@@ -108,9 +108,9 @@ class PluginServiceC {
     description: 'Tool from plugin C that depends on A'
   })
   async toolC(
-    @Input({ schema: z.string(), description: 'Input for tool C' }) _input: string
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     
     let result = `Plugin C processed: ${input}`;
     
@@ -498,7 +498,7 @@ describe('Plugin System Integration Tests', () => {
               plugins,
               resource: {
                 identifier: 'plugin-count',
-                type: 'configuration' as const
+                type: 'service' as const
               },
               recommendedStrategy: ResolutionStrategy.MANUAL,
               possibleStrategies: [ResolutionStrategy.MANUAL],

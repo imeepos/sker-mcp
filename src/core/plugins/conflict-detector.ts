@@ -413,8 +413,8 @@ export class PluginConflictDetector {
     for (const plugin of plugins) {
       if (plugin.dependencies) {
         for (const dependency of plugin.dependencies) {
-          const depName = dependency.name || dependency;
-          const depVersion = dependency.version || '*';
+          const depName = dependency;
+          const depVersion = '*'; // Default version for string dependencies
           
           if (!dependencyMap.has(depName)) {
             dependencyMap.set(depName, []);

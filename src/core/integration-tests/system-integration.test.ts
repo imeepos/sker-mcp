@@ -12,11 +12,11 @@ import { McpApplication } from '../mcp-application.js';
 import { ServiceManager } from '../service-manager.js';
 import { PluginManager } from '../plugin-manager.js';
 import { FeatureInjector, IsolationLevel } from '../plugins/feature-injector.js';
-import { PluginConflictDetector, ConflictType } from '../plugins/conflict-detector.js';
+import { PluginConflictDetector, ConflictType, ResolutionStrategy, ConflictSeverity } from '../plugins/conflict-detector.js';
 import { McpTool, Input, UseMiddleware, ErrorHandler } from '../decorators/index.js';
 import { BuiltinMiddlewares } from '../decorators/use-middleware.js';
 import { BuiltinErrorHandlers } from '../decorators/error-handler.js';
-import { createProviders } from '../providers.js';
+import { createMcpProviders } from '../providers.js';
 import type {
   IPlugin,
   IEnhancedPlugin,
@@ -34,9 +34,9 @@ class TestService {
     description: 'Basic test operation'
   })
   async basicOperation(
-    @Input({ schema: z.string(), description: 'Test input' }) _input: string
+    request: CallToolRequest
   ) {
-    const { input } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { input } = this.extractArgs(request);
     return { result: `Processed: ${input}`, type: 'basic' };
   }
 
@@ -49,9 +49,9 @@ class TestService {
     BuiltinMiddlewares.createTimingMiddleware()
   )
   async middlewareOperation(
-    @Input({ schema: z.number(), description: 'Test number' }) _num: number
+    request: CallToolRequest
   ) {
-    const { num } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { num } = this.extractArgs(request);
     return { result: num * 2, type: 'middleware' };
   }
 
@@ -64,14 +64,14 @@ class TestService {
     type: 'error_handled'
   }))
   async errorOperation(
-    @Input({ schema: z.boolean(), description: 'Should fail' }) _shouldFail: boolean
+    request: CallToolRequest
   ) {
-    const { shouldFail } = this.extractArgs(arguments[0] as CallToolRequest);
-    
+    const { shouldFail } = this.extractArgs(request);
+
     if (shouldFail) {
       throw new Error('Test error for error handling');
     }
-    
+
     return { result: 'success', type: 'error' };
   }
 
@@ -85,18 +85,9 @@ class TestService {
   )
   @ErrorHandler(BuiltinErrorHandlers.createLoggingErrorHandler({ prefix: 'COMPLEX_ERROR' }))
   async complexOperation(
-    @Input({ 
-      schema: z.object({
-        operation: z.enum(['add', 'multiply', 'divide']),
-        values: z.array(z.number()),
-        options: z.object({
-          precision: z.number().optional()
-        }).optional()
-      }),
-      description: 'Complex operation parameters'
-    }) _params: any
+    request: CallToolRequest
   ) {
-    const { params } = this.extractArgs(arguments[0] as CallToolRequest);
+    const { params } = this.extractArgs(request);
     
     let result: number;
     switch (params.operation) {
@@ -185,7 +176,7 @@ describe('System Integration Tests', () => {
 
   beforeEach(async () => {
     // Create application with all providers
-    const providers = createProviders();
+    const providers = createMcpProviders();
     
     // Mock the injector creation
     const mockContainer = {
@@ -234,10 +225,10 @@ describe('System Integration Tests', () => {
   describe('Basic System Functionality', () => {
     test('should start and stop application successfully', async () => {
       await expect(mcpApp.start()).resolves.not.toThrow();
-      expect(mcpApp.getStatus().status).toBe('running');
-      
+      expect(mcpApp.getStatus()).toBe('running');
+
       await expect(mcpApp.stop()).resolves.not.toThrow();
-      expect(mcpApp.getStatus().status).toBe('stopped');
+      expect(mcpApp.getStatus()).toBe('stopped');
     });
 
     test('should register and execute basic tools', async () => {
@@ -485,11 +476,11 @@ describe('System Integration Tests', () => {
           return plugins.length > 5 ? [{
             id: 'custom-conflict',
             type: ConflictType.CONFIGURATION,
-            severity: 'warning' as const,
+            severity: ConflictSeverity.WARNING,
             plugins,
-            resource: { identifier: 'too-many-plugins', type: 'configuration' as const },
-            recommendedStrategy: 'manual' as const,
-            possibleStrategies: ['manual' as const],
+            resource: { identifier: 'too-many-plugins', type: 'service' as const },
+            recommendedStrategy: ResolutionStrategy.MANUAL,
+            possibleStrategies: [ResolutionStrategy.MANUAL],
             description: 'Too many plugins loaded',
             detectedAt: new Date()
           }] : [];
@@ -499,7 +490,7 @@ describe('System Integration Tests', () => {
       conflictDetector.configure({
         enabled: true,
         strategies: [ConflictType.CONFIGURATION],
-        defaultResolution: 'manual',
+        defaultResolution: ResolutionStrategy.MANUAL,
         pluginPriorities: [],
         customRules: [customRule]
       });

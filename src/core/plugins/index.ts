@@ -23,7 +23,7 @@ export {
   BuiltinConflictRules
 } from './conflict-detector.js';
 
-// Re-export types
+// Re-export types from types.js
 export type {
   PluginPermissions,
   PluginIsolationOptions,
@@ -32,10 +32,14 @@ export type {
   Container,
   IsolatedPluginInstance,
   IFeatureInjector,
-  IEnhancedPlugin,
+  IEnhancedPlugin
+} from '../types.js';
+
+// Re-export conflict-related types from conflict-detector.js
+export type {
   PluginConflict,
   ConflictResolution,
   PluginPriority,
   ConflictDetectionConfig,
   ConflictRule
-} from '../types.js';
+} from './conflict-detector.js';

@@ -7,21 +7,22 @@
  * main application.
  */
 
-import { 
-  Container, 
-  Injector, 
-  Provider, 
+import {
+  Injector,
+  Provider,
   Injectable,
   InjectionToken,
-  ReflectiveInjector 
+  createFeatureInjector
 } from '@sker/di';
 import type {
   IPlugin,
+  IEnhancedPlugin,
   IFeatureInjector,
   PluginContext,
   PluginIsolationOptions,
   PluginCommunicationBridge,
-  IsolatedPluginInstance
+  IsolatedPluginInstance,
+  Container
 } from '../types.js';
 
 /**
@@ -283,7 +284,7 @@ export class FeatureInjector implements IFeatureInjector {
    * Create isolated dependency injection container
    */
   private async createIsolatedContainer(
-    plugin: IPlugin,
+    plugin: IEnhancedPlugin,
     isolationLevel: IsolationLevel,
     permissions: PluginPermissions
   ): Promise<Container> {
@@ -308,7 +309,7 @@ export class FeatureInjector implements IFeatureInjector {
   /**
    * Create child container with controlled access to parent services
    */
-  private createChildContainer(plugin: IPlugin, permissions: PluginPermissions): Container {
+  private createChildContainer(plugin: IEnhancedPlugin, permissions: PluginPermissions): Container {
     const providers: Provider[] = [];
 
     // Add plugin-specific providers
@@ -324,7 +325,7 @@ export class FeatureInjector implements IFeatureInjector {
     // Create a new container/injector
     // Note: This is a simplified implementation
     // In a real system, you'd use the actual DI framework's child container creation
-    const childInjector = ReflectiveInjector.resolveAndCreate(childProviders, this.parentInjector);
+    const childInjector = createFeatureInjector(childProviders, this.parentInjector as any);
 
     return {
       injector: childInjector,
@@ -335,7 +336,7 @@ export class FeatureInjector implements IFeatureInjector {
   /**
    * Create fully isolated container with no parent access
    */
-  private createFullyIsolatedContainer(plugin: IPlugin): Container {
+  private createFullyIsolatedContainer(plugin: IEnhancedPlugin): Container {
     const providers: Provider[] = [];
 
     // Add plugin-specific providers
@@ -346,7 +347,7 @@ export class FeatureInjector implements IFeatureInjector {
     // Add minimal core services if needed
     // This might include essential services like logging, etc.
 
-    const isolatedInjector = ReflectiveInjector.resolveAndCreate(providers);
+    const isolatedInjector = createFeatureInjector(providers, this.parentInjector as any);
 
     return {
       injector: isolatedInjector,
