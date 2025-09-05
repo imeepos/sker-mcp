@@ -215,7 +215,7 @@ export class WinstonLogger implements IWinstonLogger {
           winston.format.timestamp(),
           winston.format.errors({ stack: true }),
           winston.format.printf(({ timestamp, level, message, component, requestId, ...meta }) => {
-            const reqId = requestId ? `(${requestId.substring(0, 8)})` : '';
+            const reqId = requestId ? `(${String(requestId).substring(0, 8)})` : '';
             const comp = component ? `[${component}]` : '';
             const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
             return `${timestamp} ${level} ${comp}${reqId} ${message}${metaStr}`;

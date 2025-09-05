@@ -8,6 +8,10 @@ describe('PluginManager', () => {
   let pluginManager: PluginManager;
   let mockProjectManager: jest.Mocked<ProjectManager>;
   let mockLogger: any;
+  let mockPluginDiscovery: any;
+  let mockPluginLoader: any;
+  let mockConflictDetector: any;
+  let mockFeatureInjector: any;
 
   beforeEach(() => {
     // Mock logger
@@ -29,7 +33,103 @@ describe('PluginManager', () => {
       scanPluginsDirectory: jest.fn()
     } as any;
 
+    // Mock PluginDiscovery
+    mockPluginDiscovery = {
+      discoverPlugin: jest.fn().mockImplementation((pluginName: string) => {
+        // Return a default discovered plugin for any plugin name
+        return Promise.resolve({
+          name: pluginName,
+          version: '1.0.0',
+          path: `/test/plugins/${pluginName}`,
+          isValid: true,
+          validationErrors: [],
+          metadata: {
+            mcp: {
+              isolation: {
+                level: 'service',
+                permissions: {
+                  parentServices: false,
+                  globalRegistration: false,
+                  crossPluginAccess: false,
+                  coreSystemAccess: false
+                }
+              }
+            }
+          }
+        });
+      }),
+      discoverPlugins: jest.fn().mockResolvedValue([])
+    };
+
+    // Mock PluginLoader
+    mockPluginLoader = {
+      loadPlugin: jest.fn().mockImplementation((discoveredPlugin: any) => {
+        // Return a default loaded plugin for any discovered plugin
+        return Promise.resolve({
+          success: true,
+          plugin: {
+            name: discoveredPlugin.name,
+            version: discoveredPlugin.version,
+            description: `Plugin ${discoveredPlugin.name}`,
+            author: 'test',
+            dependencies: [],
+            services: [],
+            hooks: {
+              onLoad: jest.fn().mockResolvedValue(undefined),
+              onUnload: jest.fn().mockResolvedValue(undefined)
+            }
+          },
+          metrics: {
+            loadTime: 100,
+            memoryUsage: 1024,
+            dependencyCount: 0
+          }
+        });
+      }),
+      clearCache: jest.fn()
+    };
+
+    // Mock ConflictDetector
+    mockConflictDetector = {
+      detectConflicts: jest.fn().mockReturnValue([]),
+      resolveConflict: jest.fn(),
+      configure: jest.fn()
+    };
+
+    // Mock FeatureInjector
+    mockFeatureInjector = {
+      createIsolatedPlugin: jest.fn().mockImplementation(async (plugin: any) => {
+        // Call the onLoad hook if it exists (simulating real behavior)
+        if (plugin.hooks?.onLoad) {
+          await plugin.hooks.onLoad();
+        }
+
+        // Return a default isolated instance for any plugin
+        return Promise.resolve({
+          plugin: plugin,
+          injector: {},
+          container: {},
+          bridge: {},
+          destroy: jest.fn().mockResolvedValue(undefined)
+        });
+      }),
+      destroyIsolatedPlugin: jest.fn().mockResolvedValue(undefined),
+      removeIsolatedPlugin: jest.fn().mockResolvedValue(undefined),
+      cleanup: jest.fn().mockResolvedValue(undefined),
+      getIsolationStats: jest.fn().mockReturnValue({
+        totalPlugins: 0,
+        isolationLevels: { service: 0, full: 0, none: 0 },
+        memoryUsage: 0
+      })
+    };
+
     pluginManager = new PluginManager(mockProjectManager, mockLogger);
+
+    // Replace the internal instances with mocks
+    (pluginManager as any).pluginDiscovery = mockPluginDiscovery;
+    (pluginManager as any).pluginLoader = mockPluginLoader;
+    (pluginManager as any).conflictDetector = mockConflictDetector;
+    (pluginManager as any).featureInjector = mockFeatureInjector;
   });
 
   afterEach(() => {
@@ -66,8 +166,56 @@ describe('PluginManager', () => {
   describe('Plugin Loading', () => {
     it('should_load_plugin_successfully', async () => {
       const pluginName = 'test-plugin';
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(true);
-      mockProjectManager.hasValidPluginPackageJson.mockResolvedValue(true);
+
+      // Mock discovered plugin
+      const mockDiscoveredPlugin = {
+        name: pluginName,
+        version: '0.0.1',
+        path: `/test/plugins/${pluginName}`,
+        isValid: true,
+        validationErrors: [],
+        metadata: {
+          mcp: {
+            isolation: {
+              level: 'service',
+              permissions: {
+                parentServices: false,
+                globalRegistration: false,
+                crossPluginAccess: false,
+                coreSystemAccess: false
+              }
+            }
+          }
+        }
+      };
+
+      // Mock loaded plugin
+      const mockPlugin = {
+        name: pluginName,
+        version: '0.0.1',
+        description: `Basic plugin stub for ${pluginName}`,
+        author: 'test',
+        dependencies: [],
+        services: [],
+        hooks: {
+          onLoad: jest.fn().mockResolvedValue(undefined)
+        }
+      };
+
+      // Mock isolated instance
+      const mockIsolatedInstance = {
+        plugin: mockPlugin,
+        injector: {},
+        container: {},
+        bridge: {}
+      };
+
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(mockDiscoveredPlugin);
+      mockPluginLoader.loadPlugin.mockResolvedValue({
+        success: true,
+        plugin: mockPlugin
+      });
+      mockFeatureInjector.createIsolatedPlugin.mockResolvedValue(mockIsolatedInstance);
 
       const plugin = await pluginManager.loadPlugin(pluginName);
 
@@ -81,57 +229,236 @@ describe('PluginManager', () => {
 
     it('should_fail_to_load_non_existent_plugin', async () => {
       const pluginName = 'non-existent-plugin';
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(false);
+
+      // Mock plugin not found
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(null);
 
       await expect(pluginManager.loadPlugin(pluginName)).rejects.toThrow(
-        `Plugin directory not found: ${pluginName}`
+        `Plugin not found: ${pluginName}`
       );
       expect(pluginManager.getPluginStatus(pluginName)).toBe(PluginStatus.FAILED);
     });
 
     it('should_fail_to_load_plugin_with_invalid_package_json', async () => {
       const pluginName = 'invalid-plugin';
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(true);
-      mockProjectManager.hasValidPluginPackageJson.mockResolvedValue(false);
+
+      // Mock discovered plugin with validation errors
+      const mockDiscoveredPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        path: `/test/plugins/${pluginName}`,
+        isValid: false,
+        validationErrors: ['Invalid package.json'],
+        metadata: {
+          mcp: {
+            isolation: {
+              level: 'service',
+              permissions: {
+                parentServices: false,
+                globalRegistration: false,
+                crossPluginAccess: false,
+                coreSystemAccess: false
+              }
+            }
+          }
+        }
+      };
+
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(mockDiscoveredPlugin);
 
       await expect(pluginManager.loadPlugin(pluginName)).rejects.toThrow(
-        `Plugin has invalid or missing package.json: ${pluginName}`
+        `Invalid plugin: Invalid package.json`
       );
       expect(pluginManager.getPluginStatus(pluginName)).toBe(PluginStatus.FAILED);
     });
 
     it('should_set_loading_status_during_load', async () => {
       const pluginName = 'loading-plugin';
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(true);
-      mockProjectManager.hasValidPluginPackageJson.mockResolvedValue(true);
+
+      // Mock discovered plugin
+      const mockDiscoveredPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        path: `/test/plugins/${pluginName}`,
+        isValid: true,
+        validationErrors: [],
+        metadata: {
+          mcp: {
+            isolation: {
+              level: 'service',
+              permissions: {
+                parentServices: false,
+                globalRegistration: false,
+                crossPluginAccess: false,
+                coreSystemAccess: false
+              }
+            }
+          }
+        }
+      };
+
+      // Mock loaded plugin
+      const mockPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        description: `Plugin ${pluginName}`,
+        author: 'test',
+        dependencies: [],
+        services: [],
+        hooks: {}
+      };
+
+      // Mock isolated instance
+      const mockIsolatedInstance = {
+        plugin: mockPlugin,
+        injector: {},
+        container: {},
+        bridge: {}
+      };
+
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(mockDiscoveredPlugin);
+      mockPluginLoader.loadPlugin.mockResolvedValue({
+        success: true,
+        plugin: mockPlugin
+      });
+      mockFeatureInjector.createIsolatedPlugin.mockResolvedValue(mockIsolatedInstance);
 
       const loadPromise = pluginManager.loadPlugin(pluginName);
-      
+
       // Status should be LOADING during the load process
       // Note: This is a bit tricky to test due to async nature, but we can verify the final state
       await loadPromise;
-      
+
       expect(pluginManager.getPluginStatus(pluginName)).toBe(PluginStatus.LOADED);
     });
 
     it('should_call_onLoad_hook_if_available', async () => {
       const pluginName = 'hook-plugin';
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(true);
-      mockProjectManager.hasValidPluginPackageJson.mockResolvedValue(true);
+
+      const mockOnLoadHook = jest.fn().mockResolvedValue(undefined);
+
+      // Mock discovered plugin
+      const mockDiscoveredPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        path: `/test/plugins/${pluginName}`,
+        isValid: true,
+        validationErrors: [],
+        metadata: {
+          mcp: {
+            isolation: {
+              level: 'service',
+              permissions: {
+                parentServices: false,
+                globalRegistration: false,
+                crossPluginAccess: false,
+                coreSystemAccess: false
+              }
+            }
+          }
+        }
+      };
+
+      // Mock loaded plugin with onLoad hook
+      const mockPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        description: `Plugin ${pluginName}`,
+        author: 'test',
+        dependencies: [],
+        services: [],
+        hooks: {
+          onLoad: mockOnLoadHook
+        }
+      };
+
+      // Mock isolated instance
+      const mockIsolatedInstance = {
+        plugin: mockPlugin,
+        injector: {},
+        container: {},
+        bridge: {}
+      };
+
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(mockDiscoveredPlugin);
+      mockPluginLoader.loadPlugin.mockResolvedValue({
+        success: true,
+        plugin: mockPlugin
+      });
+      mockFeatureInjector.createIsolatedPlugin.mockResolvedValue(mockIsolatedInstance);
 
       const plugin = await pluginManager.loadPlugin(pluginName);
 
       expect(plugin.hooks?.onLoad).toBeDefined();
-      // The hook should have been called during loading
-      expect(mockLogger.debug).toHaveBeenCalledWith(`Plugin ${pluginName} loaded (stub)`);
+      expect(mockOnLoadHook).toHaveBeenCalled();
     });
   });
 
   describe('Plugin Unloading', () => {
     beforeEach(async () => {
-      // Load a plugin first
-      mockProjectManager.pluginDirectoryExists.mockResolvedValue(true);
-      mockProjectManager.hasValidPluginPackageJson.mockResolvedValue(true);
+      // Setup a loaded plugin for unloading tests
+      const pluginName = 'test-plugin';
+
+      // Mock discovered plugin
+      const mockDiscoveredPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        path: `/test/plugins/${pluginName}`,
+        isValid: true,
+        validationErrors: [],
+        metadata: {
+          mcp: {
+            isolation: {
+              level: 'service',
+              permissions: {
+                parentServices: false,
+                globalRegistration: false,
+                crossPluginAccess: false,
+                coreSystemAccess: false
+              }
+            }
+          }
+        }
+      };
+
+      // Mock loaded plugin
+      const mockPlugin = {
+        name: pluginName,
+        version: '1.0.0',
+        description: `Plugin ${pluginName}`,
+        author: 'test',
+        dependencies: [],
+        services: [],
+        hooks: {
+          onLoad: jest.fn().mockResolvedValue(undefined),
+          onUnload: jest.fn().mockResolvedValue(undefined)
+        }
+      };
+
+      // Mock isolated instance
+      const mockIsolatedInstance = {
+        plugin: mockPlugin,
+        injector: {},
+        container: {},
+        bridge: {},
+        destroy: jest.fn().mockResolvedValue(undefined)
+      };
+
+      mockPluginDiscovery.discoverPlugin.mockResolvedValue(mockDiscoveredPlugin);
+      mockPluginLoader.loadPlugin.mockResolvedValue({
+        success: true,
+        plugin: mockPlugin
+      });
+      mockFeatureInjector.createIsolatedPlugin.mockImplementation(async (plugin: any) => {
+        // Call the onLoad hook if it exists (simulating real behavior)
+        if (plugin.hooks?.onLoad) {
+          await plugin.hooks.onLoad();
+        }
+        return mockIsolatedInstance;
+      });
+      mockFeatureInjector.destroyIsolatedPlugin.mockResolvedValue(undefined);
+
+      // Load a test plugin first
       await pluginManager.loadPlugin('test-plugin');
     });
 
@@ -142,10 +469,7 @@ describe('PluginManager', () => {
 
       expect(pluginManager.isPluginLoaded(pluginName)).toBe(false);
       expect(pluginManager.getPluginStatus(pluginName)).toBe(PluginStatus.UNLOADED);
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Plugin unloaded successfully',
-        { pluginName }
-      );
+      expect(mockFeatureInjector.destroyIsolatedPlugin).toHaveBeenCalledWith(pluginName);
     });
 
     it('should_handle_unloading_non_existent_plugin', async () => {
@@ -161,20 +485,21 @@ describe('PluginManager', () => {
 
     it('should_call_onUnload_hook_if_available', async () => {
       const pluginName = 'test-plugin';
+      const plugin = pluginManager.getActivePlugins().find(p => p.name === pluginName);
+      const mockOnUnloadHook = plugin?.hooks?.onUnload as jest.Mock;
 
       await pluginManager.unloadPlugin(pluginName);
 
       // The hook should have been called during unloading
-      expect(mockLogger.debug).toHaveBeenCalledWith(`Plugin ${pluginName} unloaded (stub)`);
+      expect(mockOnUnloadHook).toHaveBeenCalled();
     });
 
     it('should_handle_unload_errors_gracefully', async () => {
       const pluginName = 'test-plugin';
-      
+
       // Mock an error in the unload hook
       const plugin = pluginManager.getActivePlugins().find(p => p.name === pluginName);
       if (plugin?.hooks?.onUnload) {
-        const originalOnUnload = plugin.hooks.onUnload;
         plugin.hooks.onUnload = jest.fn().mockRejectedValue(new Error('Unload hook failed'));
       }
 
@@ -348,7 +673,9 @@ describe('PluginManager', () => {
 
     it('should_handle_plugin_loading_exceptions', async () => {
       const pluginName = 'exception-plugin';
-      mockProjectManager.pluginDirectoryExists.mockRejectedValue(new Error('Directory access error'));
+
+      // Mock plugin discovery to throw an error
+      mockPluginDiscovery.discoverPlugin.mockRejectedValueOnce(new Error('Directory access error'));
 
       await expect(pluginManager.loadPlugin(pluginName)).rejects.toThrow('Directory access error');
       expect(pluginManager.getPluginStatus(pluginName)).toBe(PluginStatus.FAILED);
