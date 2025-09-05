@@ -436,14 +436,19 @@ export class StructuredLogger {
    * Log security event
    */
   logSecurityEvent(event: string, severity: 'low' | 'medium' | 'high' | 'critical', details?: Record<string, any>): void {
-    const logMethod = severity === 'critical' || severity === 'high' ? this.logger.error : this.logger.warn;
-    
-    logMethod(`Security event: ${event}`, {
+    const message = `Security event: ${event}`;
+    const meta = {
       event,
       severity,
       details,
       category: 'security_event'
-    });
+    };
+
+    if (severity === 'critical' || severity === 'high') {
+      this.logger.error(message, meta);
+    } else {
+      this.logger.warn(message, meta);
+    }
   }
 
   /**
@@ -460,6 +465,87 @@ export class StructuredLogger {
       details,
       category: 'api_request'
     });
+  }
+}
+
+/**
+ * Mock Winston Logger for Testing
+ *
+ * This provides a mock implementation of the Winston logger interface
+ * for use in unit tests and integration tests.
+ */
+export class MockWinstonLogger implements IWinstonLogger {
+  private logs: Array<{ level: string; message: string; meta?: any }> = [];
+  private requestContext: { requestId?: string; userId?: string } = {};
+  private component: string;
+
+  constructor(component: string = 'test') {
+    this.component = component;
+  }
+
+  debug(message: string, meta?: any): void {
+    this.log('debug', message, meta);
+  }
+
+  info(message: string, meta?: any): void {
+    this.log('info', message, meta);
+  }
+
+  warn(message: string, meta?: any): void {
+    this.log('warn', message, meta);
+  }
+
+  error(message: string, meta?: any): void {
+    this.log('error', message, meta);
+  }
+
+  log(level: string, message: string, meta?: any): void {
+    this.logs.push({
+      level,
+      message,
+      meta: {
+        ...meta,
+        component: this.component,
+        requestId: this.requestContext.requestId,
+        userId: this.requestContext.userId,
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+
+  child(context: Record<string, any>): IWinstonLogger {
+    const childLogger = new MockWinstonLogger(this.component);
+    childLogger.requestContext = { ...this.requestContext, ...context };
+    return childLogger;
+  }
+
+  startTimer(name: string): () => void {
+    const startTime = Date.now();
+    return () => {
+      const duration = Date.now() - startTime;
+      this.info(`Timer ${name} completed`, { duration, timerName: name });
+    };
+  }
+
+  setRequestContext(requestId: string, userId?: string): void {
+    this.requestContext = { requestId, userId };
+  }
+
+  clearRequestContext(): void {
+    this.requestContext = {};
+  }
+
+  // Test helper methods
+  getLogs(): Array<{ level: string; message: string; meta?: any }> {
+    return [...this.logs];
+  }
+
+  clearLogs(): void {
+    this.logs = [];
+  }
+
+  getLogsByLevel(level: string): Array<{ level: string; message: string; meta?: any }> {
+    return this.logs.filter(log => log.level === level);
   }
 }
 

@@ -5,7 +5,6 @@
  * including schema validation, environment processing, file loading, and hot reload functionality.
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { ConfigManager } from './config-manager.js';
 import { ConfigValidator, Config } from './config-schema.js';
 import { EnvironmentConfigProcessor } from './environment-config.js';
@@ -136,12 +135,29 @@ describe('ConfigManager', () => {
   describe('Runtime Updates', () => {
     it('should update configuration at runtime', () => {
       const updates = {
-        server: { name: 'runtime-updated' }
+        server: {
+          version: '1.0.0',
+          name: 'runtime-updated',
+          transport: {
+            type: 'stdio' as const
+          },
+          capabilities: {
+            logging: true,
+            sampling: false,
+            experimental: false
+          },
+          limits: {
+            maxConcurrentRequests: 100,
+            maxRequestSize: 1048576,
+            maxResponseSize: 1048576,
+            requestTimeout: 30000
+          }
+        }
       };
-      
+
       configManager.updateConfig(updates, 'test-source');
       const config = configManager.getConfig();
-      
+
       expect(config.server.name).toBe('runtime-updated');
     });
 
@@ -219,7 +235,26 @@ describe('ConfigManager', () => {
   describe('Reset to Defaults', () => {
     it('should reset configuration to defaults', () => {
       // Make some changes
-      configManager.updateConfig({ server: { name: 'changed' } });
+      configManager.updateConfig({
+        server: {
+          version: '1.0.0',
+          name: 'changed',
+          transport: {
+            type: 'stdio' as const
+          },
+          capabilities: {
+            logging: true,
+            sampling: false,
+            experimental: false
+          },
+          limits: {
+            maxConcurrentRequests: 100,
+            maxRequestSize: 1048576,
+            maxResponseSize: 1048576,
+            requestTimeout: 30000
+          }
+        }
+      });
       const changedConfig = configManager.getConfig();
       expect(changedConfig.server.name).toBe('changed');
       

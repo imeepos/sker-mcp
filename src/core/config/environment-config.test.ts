@@ -5,7 +5,6 @@
  * including environment variable parsing, template loading, and validation.
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { EnvironmentConfigProcessor, EnvironmentUtils } from './environment-config.js';
 import { ConfigValidator } from './config-schema.js';
 import os from 'os';

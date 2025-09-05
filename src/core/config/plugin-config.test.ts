@@ -5,11 +5,10 @@
  * including plugin configuration isolation, validation, and file operations.
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { 
-  PluginConfigManager, 
-  PluginConfigUtils, 
-  PluginIsolationLevel 
+import {
+  PluginConfigManager,
+  PluginConfigUtils,
+  PluginIsolationLevel
 } from './plugin-config.js';
 import { ConfigManager } from './config-manager.js';
 import fs from 'fs';
@@ -57,6 +56,21 @@ describe('PluginConfigManager', () => {
         plugins: {
           plugins: {
             'test-plugin': { enabled: true }
+          },
+          discovery: {
+            directories: ['./plugins'],
+            maxDepth: 3,
+            watch: false,
+            includeDev: false
+          },
+          loading: {
+            timeout: 30000,
+            parallel: true,
+            maxConcurrent: 5
+          },
+          isolation: {
+            default: 'full' as const,
+            plugins: {}
           }
         }
       });
@@ -400,6 +414,21 @@ describe('Integration Tests', () => {
       plugins: {
         plugins: {
           'integrated-plugin': { mainConfig: true }
+        },
+        discovery: {
+          directories: ['./plugins'],
+          maxDepth: 3,
+          watch: false,
+          includeDev: false
+        },
+        loading: {
+          timeout: 30000,
+          parallel: true,
+          maxConcurrent: 5
+        },
+        isolation: {
+          default: 'full' as const,
+          plugins: {}
         }
       }
     });
