@@ -1,9 +1,9 @@
 /**
- * Basic Plugin Manager Implementation
+ * Enhanced Plugin Manager Implementation
  * 
- * This is a basic implementation of the plugin manager to satisfy the application's
- * dependency requirements. This will be expanded in later stages with full
- * plugin discovery, loading, and feature injector capabilities.
+ * This is a comprehensive plugin manager that integrates with the Feature Injector
+ * architecture to provide secure plugin isolation, dynamic loading/unloading,
+ * conflict detection, and service instance pre-binding capabilities.
  */
 
 import { Injectable, Inject } from '@sker/di';
@@ -11,147 +11,234 @@ import { PROJECT_MANAGER, LOGGER } from './tokens.js';
 import { ProjectManager } from './project-manager.js';
 import type { IPlugin, IPluginManager } from './types.js';
 import { PluginStatus } from './types.js';
+import { 
+  FeatureInjector,
+  PluginDiscovery,
+  PluginLoader,
+  PluginConflictDetector,
+  PluginDiscoveryUtils,
+  PluginLoaderUtils,
+  IsolationLevel,
+  PluginIsolationUtils
+} from './plugins/index.js';
+import type {
+  IWinstonLogger
+} from './logging/winston-logger.js';
+import type {
+  DiscoveredPlugin,
+  PluginLoadResult,
+  IsolatedPluginInstance
+} from './plugins/index.js';
 
 /**
- * Basic Plugin Manager implementation
+ * Enhanced Plugin Manager Implementation
  * 
- * This is a minimal implementation that provides the core plugin management
- * interface required by the McpApplication. Full functionality will be
- * implemented in Stage 3 of the development roadmap.
+ * Provides comprehensive plugin management with Feature Injector isolation,
+ * dynamic discovery and loading, conflict detection, and service pre-binding.
+ * Supports hot reloading, performance monitoring, and enterprise-grade security.
  */
 @Injectable()
 export class PluginManager implements IPluginManager {
   private activePlugins: Map<string, IPlugin> = new Map();
   private pluginStatuses: Map<string, PluginStatus> = new Map();
+  private isolatedInstances: Map<string, IsolatedPluginInstance> = new Map();
+  private discoveredPlugins: Map<string, DiscoveredPlugin> = new Map();
+  private pluginLoadResults: Map<string, PluginLoadResult> = new Map();
+  private featureInjector: FeatureInjector;
+  private pluginDiscovery: PluginDiscovery;
+  private pluginLoader: PluginLoader;
+  private conflictDetector: PluginConflictDetector;
+  private isInitialized = false;
 
   constructor(
     @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
-    @Inject(LOGGER) private readonly logger: any
+    @Inject(LOGGER) private readonly logger: IWinstonLogger
   ) {
-    this.logger?.debug('PluginManager initialized (basic implementation)');
+    // Initialize plugin system components
+    this.featureInjector = new FeatureInjector(this.projectManager as any); // TODO: Fix injector reference
+    this.pluginDiscovery = new PluginDiscovery(this.projectManager, this.logger);
+    this.pluginLoader = new PluginLoader(this.logger, this.projectManager);
+    this.conflictDetector = new PluginConflictDetector(this.logger);
+    
+    this.logger.debug('PluginManager initialized with Feature Injector architecture');
   }
 
   /**
-   * Load a plugin by name
+   * Load a plugin by name with Feature Injector isolation
    * 
    * @param pluginName - The name of the plugin to load
    * @returns Promise resolving to the loaded plugin
    */
   async loadPlugin(pluginName: string): Promise<IPlugin> {
+    await this.ensureInitialized();
+    
+    const startTime = Date.now();
+    
     try {
-      this.logger?.debug('Loading plugin (basic implementation)', { pluginName });
+      this.logger.info('Loading plugin with Feature Injector', { pluginName });
       
       // Set status to loading
       this.pluginStatuses.set(pluginName, PluginStatus.LOADING);
 
-      // Check if plugin directory exists
-      const pluginExists = await this.projectManager.pluginDirectoryExists(pluginName);
-      if (!pluginExists) {
-        throw new Error(`Plugin directory not found: ${pluginName}`);
+      // Check if already loaded
+      if (this.activePlugins.has(pluginName)) {
+        throw new Error(`Plugin ${pluginName} is already loaded`);
       }
 
-      // Check if plugin has valid package.json
-      const hasValidPackageJson = await this.projectManager.hasValidPluginPackageJson(pluginName);
-      if (!hasValidPackageJson) {
-        throw new Error(`Plugin has invalid or missing package.json: ${pluginName}`);
+      // Discover plugin
+      const discoveredPlugin = await this.pluginDiscovery.discoverPlugin(pluginName);
+      if (!discoveredPlugin) {
+        throw new Error(`Plugin not found: ${pluginName}`);
       }
 
-      // For now, create a basic plugin stub
-      // In Stage 3, this will be replaced with actual plugin loading
-      const plugin: IPlugin = {
-        name: pluginName,
-        version: '0.0.1',
-        description: `Basic plugin stub for ${pluginName}`,
-        author: 'unknown',
-        dependencies: [],
-        services: [], // No services for now
-        hooks: {
-          onLoad: async () => {
-            this.logger?.debug(`Plugin ${pluginName} loaded (stub)`);
-          },
-          onUnload: async () => {
-            this.logger?.debug(`Plugin ${pluginName} unloaded (stub)`);
-          }
-        }
-      };
-
-      // Call onLoad hook if available
-      if (plugin.hooks?.onLoad) {
-        await plugin.hooks.onLoad();
+      if (!discoveredPlugin.isValid) {
+        throw new Error(`Invalid plugin: ${discoveredPlugin.validationErrors.join(', ')}`);
       }
 
-      // Store the plugin
+      // Load plugin module
+      const loadResult = await this.pluginLoader.loadPlugin(
+        discoveredPlugin,
+        PluginLoaderUtils.createDefaultOptions()
+      );
+
+      if (!loadResult.success || !loadResult.plugin) {
+        throw new Error(loadResult.error || 'Failed to load plugin module');
+      }
+
+      const plugin = loadResult.plugin;
+
+      // Detect conflicts before loading
+      await this.detectAndResolveConflicts(plugin);
+
+      // Create isolated instance with Feature Injector
+      const isolationOptions = this.determineIsolationOptions(discoveredPlugin);
+      const isolatedInstance = await this.featureInjector.createIsolatedPlugin(
+        plugin,
+        isolationOptions
+      );
+
+      // Store references
       this.activePlugins.set(pluginName, plugin);
+      this.isolatedInstances.set(pluginName, isolatedInstance);
+      this.discoveredPlugins.set(pluginName, discoveredPlugin);
+      this.pluginLoadResults.set(pluginName, loadResult);
       this.pluginStatuses.set(pluginName, PluginStatus.LOADED);
 
-      this.logger?.info(`Plugin loaded successfully (basic stub)`, { 
-        pluginName, 
-        version: plugin.version 
+      const duration = Date.now() - startTime;
+      this.logger.info('Plugin loaded successfully with isolation', {
+        pluginName,
+        version: plugin.version,
+        duration,
+        isolationLevel: isolationOptions.isolationLevel,
+        services: plugin.services?.length || 0
       });
 
       return plugin;
 
     } catch (error) {
       this.pluginStatuses.set(pluginName, PluginStatus.FAILED);
-      this.logger?.error('Failed to load plugin', { 
-        pluginName, 
-        error: (error as Error).message 
+      const duration = Date.now() - startTime;
+      
+      this.logger.error('Failed to load plugin', {
+        pluginName,
+        error: error instanceof Error ? error.message : String(error),
+        duration
       });
+      
       throw error;
     }
   }
 
   /**
-   * Unload a plugin by name
+   * Unload a plugin by name with proper isolation cleanup
    * 
    * @param pluginName - The name of the plugin to unload
    */
   async unloadPlugin(pluginName: string): Promise<void> {
     try {
-      this.logger?.debug('Unloading plugin', { pluginName });
+      this.logger.info('Unloading plugin with isolation cleanup', { pluginName });
 
       const plugin = this.activePlugins.get(pluginName);
       if (!plugin) {
-        this.logger?.warn('Plugin not found for unloading', { pluginName });
+        this.logger.warn('Plugin not found for unloading', { pluginName });
         return;
       }
 
-      // Call onUnload hook if available
-      if (plugin.hooks?.onUnload) {
-        await plugin.hooks.onUnload();
+      // Get isolated instance
+      const isolatedInstance = this.isolatedInstances.get(pluginName);
+      
+      if (isolatedInstance) {
+        // Destroy isolated instance (handles cleanup and onUnload hooks)
+        await isolatedInstance.destroy();
+        
+        // Remove from Feature Injector
+        await this.featureInjector.removeIsolatedPlugin(pluginName, plugin.version);
+      } else {
+        // Fallback: call onUnload hook directly
+        if (plugin.hooks?.onUnload) {
+          await plugin.hooks.onUnload();
+        }
       }
 
-      // Remove from active plugins
+      // Clean up all references
       this.activePlugins.delete(pluginName);
+      this.isolatedInstances.delete(pluginName);
+      this.discoveredPlugins.delete(pluginName);
+      this.pluginLoadResults.delete(pluginName);
       this.pluginStatuses.set(pluginName, PluginStatus.UNLOADED);
 
-      this.logger?.info('Plugin unloaded successfully', { pluginName });
+      this.logger.info('Plugin unloaded successfully', { pluginName });
 
     } catch (error) {
-      this.logger?.error('Failed to unload plugin', { 
-        pluginName, 
-        error: (error as Error).message 
+      this.logger.error('Failed to unload plugin', {
+        pluginName,
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
   }
 
   /**
-   * Reload a plugin by name
+   * Reload a plugin by name with hot reloading support
    * 
    * @param pluginName - The name of the plugin to reload
    * @returns Promise resolving to the reloaded plugin
    */
   async reloadPlugin(pluginName: string): Promise<IPlugin> {
-    this.logger?.debug('Reloading plugin', { pluginName });
+    const startTime = Date.now();
+    
+    this.logger.info('Reloading plugin with hot reload', { pluginName });
 
-    // Unload if currently loaded
-    if (this.activePlugins.has(pluginName)) {
-      await this.unloadPlugin(pluginName);
+    try {
+      // Unload if currently loaded
+      if (this.activePlugins.has(pluginName)) {
+        await this.unloadPlugin(pluginName);
+      }
+
+      // Clear loader cache for hot reloading
+      this.pluginLoader.clearCache();
+
+      // Load again
+      const plugin = await this.loadPlugin(pluginName);
+      
+      const duration = Date.now() - startTime;
+      this.logger.info('Plugin reloaded successfully', {
+        pluginName,
+        version: plugin.version,
+        duration
+      });
+      
+      return plugin;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error('Failed to reload plugin', {
+        pluginName,
+        error: error instanceof Error ? error.message : String(error),
+        duration
+      });
+      throw error;
     }
-
-    // Load again
-    return await this.loadPlugin(pluginName);
   }
 
   /**
@@ -185,9 +272,9 @@ export class PluginManager implements IPluginManager {
   }
 
   /**
-   * Get information about all plugins
+   * Get comprehensive plugin information with isolation details
    * 
-   * @returns Plugin information summary
+   * @returns Enhanced plugin information summary
    */
   getPluginInfo(): {
     total: number;
@@ -195,6 +282,12 @@ export class PluginManager implements IPluginManager {
     failed: number;
     activePlugins: string[];
     pluginStatuses: Record<string, PluginStatus>;
+    isolationStats: any;
+    performanceMetrics: {
+      averageLoadTime: number;
+      totalLoadTime: number;
+      slowestPlugin: string | null;
+    };
   } {
     const activePluginNames = Array.from(this.activePlugins.keys());
     const statusEntries = Array.from(this.pluginStatuses.entries());
@@ -202,21 +295,48 @@ export class PluginManager implements IPluginManager {
     const loaded = statusEntries.filter(([_, status]) => status === PluginStatus.LOADED).length;
     const failed = statusEntries.filter(([_, status]) => status === PluginStatus.FAILED).length;
 
+    // Calculate performance metrics
+    const loadResults = Array.from(this.pluginLoadResults.values());
+    const loadTimes = loadResults.map(r => r.metrics.loadTime);
+    const totalLoadTime = loadTimes.reduce((sum, time) => sum + time, 0);
+    const averageLoadTime = loadTimes.length > 0 ? totalLoadTime / loadTimes.length : 0;
+    
+    let slowestPlugin: string | null = null;
+    let maxLoadTime = 0;
+    for (const [pluginName, result] of this.pluginLoadResults.entries()) {
+      if (result.metrics.loadTime > maxLoadTime) {
+        maxLoadTime = result.metrics.loadTime;
+        slowestPlugin = pluginName;
+      }
+    }
+
     return {
       total: statusEntries.length,
       loaded,
       failed,
       activePlugins: activePluginNames,
-      pluginStatuses: Object.fromEntries(statusEntries)
+      pluginStatuses: Object.fromEntries(statusEntries),
+      isolationStats: this.featureInjector.getIsolationStats(),
+      performanceMetrics: {
+        averageLoadTime,
+        totalLoadTime,
+        slowestPlugin
+      }
     };
   }
 
   /**
-   * Initialize the plugin manager
+   * Initialize the plugin manager with Feature Injector architecture
    * This method can be called during application startup
    */
   async initialize(): Promise<void> {
-    this.logger?.debug('Initializing PluginManager (basic implementation)');
+    if (this.isInitialized) {
+      this.logger.warn('PluginManager is already initialized');
+      return;
+    }
+
+    const startTime = Date.now();
+    this.logger.info('Initializing PluginManager with Feature Injector architecture');
     
     try {
       // Ensure plugin directory exists
@@ -224,24 +344,48 @@ export class PluginManager implements IPluginManager {
         this.projectManager.getPluginsDirectory()
       );
 
-      this.logger?.info('PluginManager initialized successfully', {
-        pluginsDirectory: this.projectManager.getPluginsDirectory()
+      // Initialize conflict detector with default rules
+      await this.conflictDetector.initialize();
+
+      // Discover existing plugins
+      const discoveryOptions = PluginDiscoveryUtils.createDefaultOptions();
+      const discoveredPlugins = await this.pluginDiscovery.discoverPlugins(discoveryOptions);
+      
+      this.logger.info('Plugin discovery completed during initialization', {
+        totalPlugins: discoveredPlugins.length,
+        validPlugins: discoveredPlugins.filter(p => p.isValid).length
+      });
+
+      // Store discovered plugins
+      for (const plugin of discoveredPlugins) {
+        this.discoveredPlugins.set(plugin.name, plugin);
+        this.pluginStatuses.set(plugin.name, PluginStatus.UNLOADED);
+      }
+
+      const duration = Date.now() - startTime;
+      this.isInitialized = true;
+      
+      this.logger.info('PluginManager initialized successfully', {
+        pluginsDirectory: this.projectManager.getPluginsDirectory(),
+        discoveredPlugins: discoveredPlugins.length,
+        duration
       });
 
     } catch (error) {
-      this.logger?.error('Failed to initialize PluginManager', {
-        error: (error as Error).message
+      this.logger.error('Failed to initialize PluginManager', {
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
   }
 
   /**
-   * Cleanup the plugin manager
+   * Cleanup the plugin manager with Feature Injector cleanup
    * This method should be called during application shutdown
    */
   async cleanup(): Promise<void> {
-    this.logger?.debug('Cleaning up PluginManager');
+    const startTime = Date.now();
+    this.logger.info('Cleaning up PluginManager with Feature Injector');
 
     try {
       // Unload all active plugins
@@ -251,20 +395,252 @@ export class PluginManager implements IPluginManager {
         try {
           await this.unloadPlugin(pluginName);
         } catch (error) {
-          this.logger?.error('Error unloading plugin during cleanup', {
+          this.logger.error('Error unloading plugin during cleanup', {
             pluginName,
-            error: (error as Error).message
+            error: error instanceof Error ? error.message : String(error)
           });
           // Continue with other plugins even if one fails
         }
       }
 
-      this.logger?.info('PluginManager cleanup completed');
+      // Cleanup Feature Injector
+      await this.featureInjector.cleanup();
+
+      // Clear loader cache
+      this.pluginLoader.clearCache();
+
+      // Reset state
+      this.activePlugins.clear();
+      this.isolatedInstances.clear();
+      this.discoveredPlugins.clear();
+      this.pluginLoadResults.clear();
+      this.pluginStatuses.clear();
+      this.isInitialized = false;
+
+      const duration = Date.now() - startTime;
+      this.logger.info('PluginManager cleanup completed', { duration });
 
     } catch (error) {
-      this.logger?.error('Error during PluginManager cleanup', {
-        error: (error as Error).message
+      this.logger.error('Error during PluginManager cleanup', {
+        error: error instanceof Error ? error.message : String(error)
       });
     }
+  }
+
+  /**
+   * Load multiple plugins with batch processing
+   */
+  async loadPlugins(pluginNames: string[]): Promise<{
+    successful: IPlugin[];
+    failed: { name: string; error: string }[];
+    summary: { total: number; loaded: number; failed: number; duration: number };
+  }> {
+    const startTime = Date.now();
+    this.logger.info('Loading multiple plugins', { pluginNames, count: pluginNames.length });
+
+    const successful: IPlugin[] = [];
+    const failed: { name: string; error: string }[] = [];
+
+    for (const pluginName of pluginNames) {
+      try {
+        const plugin = await this.loadPlugin(pluginName);
+        successful.push(plugin);
+      } catch (error) {
+        failed.push({
+          name: pluginName,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    const summary = {
+      total: pluginNames.length,
+      loaded: successful.length,
+      failed: failed.length,
+      duration
+    };
+
+    this.logger.info('Batch plugin loading completed', summary);
+
+    return { successful, failed, summary };
+  }
+
+  /**
+   * Discover all available plugins without loading them
+   */
+  async discoverAllPlugins(): Promise<DiscoveredPlugin[]> {
+    await this.ensureInitialized();
+    
+    const options = PluginDiscoveryUtils.createDefaultOptions();
+    const discovered = await this.pluginDiscovery.discoverPlugins(options);
+    
+    // Update local cache
+    for (const plugin of discovered) {
+      this.discoveredPlugins.set(plugin.name, plugin);
+      if (!this.pluginStatuses.has(plugin.name)) {
+        this.pluginStatuses.set(plugin.name, PluginStatus.UNLOADED);
+      }
+    }
+    
+    return discovered;
+  }
+
+  /**
+   * Get isolated plugin instance
+   */
+  getIsolatedPlugin(pluginName: string): IsolatedPluginInstance | null {
+    return this.isolatedInstances.get(pluginName) || null;
+  }
+
+  /**
+   * Get plugin discovery statistics
+   */
+  async getDiscoveryStats(): Promise<any> {
+    await this.ensureInitialized();
+    return this.pluginDiscovery.getDiscoveryStats();
+  }
+
+  /**
+   * Get plugin loading performance metrics
+   */
+  getPerformanceMetrics(): {
+    loaderStats: any;
+    isolationStats: any;
+    pluginMetrics: Array<{
+      name: string;
+      loadTime: number;
+      moduleSize?: number;
+      dependencyCount?: number;
+    }>;
+  } {
+    const pluginMetrics = Array.from(this.pluginLoadResults.entries()).map(([name, result]) => ({
+      name,
+      loadTime: result.metrics.loadTime,
+      moduleSize: result.metrics.moduleSize,
+      dependencyCount: result.metrics.dependencyCount
+    }));
+
+    return {
+      loaderStats: this.pluginLoader.getLoadingStats(),
+      isolationStats: this.featureInjector.getIsolationStats(),
+      pluginMetrics
+    };
+  }
+
+  /**
+   * Validate plugin compatibility
+   */
+  async validatePluginCompatibility(pluginName: string): Promise<{
+    isCompatible: boolean;
+    issues: string[];
+  }> {
+    await this.ensureInitialized();
+    
+    const discovered = this.discoveredPlugins.get(pluginName);
+    if (!discovered) {
+      return {
+        isCompatible: false,
+        issues: ['Plugin not found']
+      };
+    }
+
+    return this.pluginDiscovery.validatePluginCompatibility(discovered);
+  }
+
+  /**
+   * Enable or disable a loaded plugin
+   */
+  async togglePlugin(pluginName: string, enabled: boolean): Promise<void> {
+    const plugin = this.activePlugins.get(pluginName);
+    if (!plugin) {
+      throw new Error(`Plugin ${pluginName} is not loaded`);
+    }
+
+    const isolatedInstance = this.isolatedInstances.get(pluginName);
+    if (!isolatedInstance) {
+      throw new Error(`Isolated instance not found for plugin ${pluginName}`);
+    }
+
+    if (enabled) {
+      if (plugin.hooks?.onEnable) {
+        await plugin.hooks.onEnable();
+      }
+      this.logger.info('Plugin enabled', { pluginName });
+    } else {
+      if (plugin.hooks?.onDisable) {
+        await plugin.hooks.onDisable();
+      }
+      this.logger.info('Plugin disabled', { pluginName });
+    }
+  }
+
+  // Private helper methods
+
+  /**
+   * Ensure the plugin manager is initialized
+   */
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+  }
+
+  /**
+   * Detect and resolve plugin conflicts
+   */
+  private async detectAndResolveConflicts(plugin: IPlugin): Promise<void> {
+    const existingPlugins = Array.from(this.activePlugins.values());
+    const conflicts = await this.conflictDetector.detectConflicts(plugin, existingPlugins);
+
+    if (conflicts.length > 0) {
+      this.logger.warn('Plugin conflicts detected', {
+        plugin: plugin.name,
+        conflicts: conflicts.map(c => ({ type: c.type, severity: c.severity }))
+      });
+
+      // For now, log conflicts but don't block loading
+      // In production, you might want to resolve or block based on severity
+      for (const conflict of conflicts) {
+        if (conflict.severity === 'critical') {
+          throw new Error(`Critical conflict detected: ${conflict.description}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Determine isolation options for a plugin
+   */
+  private determineIsolationOptions(discoveredPlugin: DiscoveredPlugin): any {
+    const metadata = discoveredPlugin.metadata;
+    const mcpConfig = metadata.mcp;
+
+    // Determine isolation level
+    let isolationLevel = IsolationLevel.SERVICE; // Default
+    if (mcpConfig?.isolationLevel) {
+      switch (mcpConfig.isolationLevel) {
+        case 'none':
+          isolationLevel = IsolationLevel.NONE;
+          break;
+        case 'service':
+          isolationLevel = IsolationLevel.SERVICE;
+          break;
+        case 'full':
+          isolationLevel = IsolationLevel.FULL;
+          break;
+      }
+    }
+
+    // Determine permissions based on plugin metadata
+    const permissions = PluginIsolationUtils.createPermissions('trusted'); // Default to trusted
+    if (mcpConfig?.permissions) {
+      Object.assign(permissions, mcpConfig.permissions);
+    }
+
+    return {
+      isolationLevel,
+      permissions
+    };
   }
 }
