@@ -3,7 +3,7 @@ import 'reflect-metadata';
 // Global test setup
 beforeAll(() => {
   // Setup global test environment
-  process.env.NODE_ENV = 'test';
+  process.env.NODE_ENV = 'testing';
   process.env.SKER_HOME_DIR = './test-sker-home';
 });
 

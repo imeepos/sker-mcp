@@ -455,6 +455,6 @@ export const EnvironmentUtils = {
 };
 
 /**
- * Export processed environment configuration
+ * Get processed environment configuration (lazy evaluation)
  */
-export const processedEnvConfig = EnvironmentConfigProcessor.createEnvironmentConfig();
+export const getProcessedEnvConfig = () => EnvironmentConfigProcessor.createEnvironmentConfig();

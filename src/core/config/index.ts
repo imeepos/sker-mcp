@@ -48,14 +48,14 @@ export {
 export {
   EnvironmentConfigProcessor,
   EnvironmentUtils,
-  processedEnvConfig
+  getProcessedEnvConfig
 } from './environment-config.js';
 
 // Core configuration manager
 export {
   ConfigManager,
   ConfigManagerFactory,
-  configManager,
+  getConfigManager,
   ConfigSource,
   ConfigChangeEvent,
   ConfigLoadOptions
