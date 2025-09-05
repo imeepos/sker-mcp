@@ -255,7 +255,7 @@ export class DefaultErrorHandler implements IErrorHandler {
 
   private classifyError(error: any): ErrorType {
     if (error instanceof McpError) {
-      switch (error.code) {
+      switch (String(error.code)) {
         case 'INVALID_PARAMS':
         case 'INVALID_REQUEST':
           return ErrorType.VALIDATION;
@@ -604,7 +604,7 @@ export class ErrorHandlingMiddleware implements IMiddleware {
     // Initialize circuit breaker if enabled
     if (this.options.enableCircuitBreaker) {
       this.circuitBreaker = new CircuitBreaker(
-        this.options.circuitBreakerConfig,
+        this.options.circuitBreakerConfig as CircuitBreakerConfig,
         this.logger
       );
     }
@@ -639,7 +639,7 @@ export class ErrorHandlingMiddleware implements IMiddleware {
     const { maxAttempts, baseDelay, maxDelay, backoffMultiplier, jitterFactor } = this.options.retryConfig;
     let lastError: any;
     
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts!; attempt++) {
       try {
         return await next();
       } catch (error) {
@@ -653,15 +653,15 @@ export class ErrorHandlingMiddleware implements IMiddleware {
 
         // Calculate delay with exponential backoff and jitter
         const delay = Math.min(
-          baseDelay * Math.pow(backoffMultiplier, attempt - 1),
-          maxDelay
+          baseDelay! * Math.pow(backoffMultiplier!, attempt - 1),
+          maxDelay!
         );
-        const jitter = delay * jitterFactor * Math.random();
+        const jitter = delay * jitterFactor! * Math.random();
         const actualDelay = delay + jitter;
 
         this.logger.warn(
           `Retrying ${context.methodName} (attempt ${attempt}/${maxAttempts}) after ${actualDelay}ms`,
-          { requestId: context.requestId, error: error.message }
+          { requestId: context.requestId, error: (error as Error).message }
         );
 
         // Wait before retry
@@ -785,11 +785,11 @@ export class ErrorHandlingMiddleware implements IMiddleware {
     };
 
     if (this.options.includeStackTrace && processedError.stackTrace) {
-      logData['stackTrace'] = processedError.stackTrace;
+      (logData as any)['stackTrace'] = processedError.stackTrace;
     }
 
     if (processedError.data) {
-      logData['data'] = processedError.data;
+      (logData as any)['data'] = processedError.data;
     }
 
     const logMessage = `[${processedError.errorId}] ${processedError.type.toUpperCase()} error in ${processedError.context.methodName}: ${processedError.technicalMessage}`;

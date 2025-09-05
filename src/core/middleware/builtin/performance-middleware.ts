@@ -396,10 +396,11 @@ export class PerformanceMiddleware implements IMiddleware {
       return result;
     } catch (err) {
       success = false;
+      const errorObj = err as any;
       error = {
-        name: err.name || 'Error',
-        message: err.message || 'Unknown error',
-        code: err.code
+        name: errorObj.name || 'Error',
+        message: errorObj.message || 'Unknown error',
+        code: errorObj.code
       };
       throw err;
     } finally {
@@ -543,11 +544,11 @@ export class PerformanceMiddleware implements IMiddleware {
     };
 
     if (metrics.error) {
-      logData['error'] = metrics.error.message;
+      (logData as any)['error'] = metrics.error.message;
     }
 
     if (metrics.customMetrics) {
-      logData['customMetrics'] = metrics.customMetrics;
+      (logData as any)['customMetrics'] = metrics.customMetrics;
     }
 
     this.logger[this.options.logLevel](

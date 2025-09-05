@@ -5,6 +5,14 @@
  * for easy import and usage throughout the application.
  */
 
+// Import middleware classes for local use in factory methods
+import { LoggingMiddleware as LoggingMW, QuietLoggingMiddleware, VerboseLoggingMiddleware, ErrorOnlyLoggingMiddleware, LoggingMiddlewareOptions } from './logging-middleware.js';
+import { ValidationMiddleware as ValidationMW, StrictValidationMiddleware, LenientValidationMiddleware, ValidationMiddlewareOptions } from './validation-middleware.js';
+import { CacheMiddleware as CacheMW, ShortTermCacheMiddleware, LongTermCacheMiddleware, CacheMiddlewareOptions } from './cache-middleware.js';
+import { AuthenticationMiddleware as AuthMW, OptionalAuthenticationMiddleware, StrictAuthenticationMiddleware, AuthenticationMiddlewareOptions } from './authentication-middleware.js';
+import { PerformanceMiddleware as PerfMW, LightweightPerformanceMiddleware, DetailedPerformanceMiddleware, PerformanceMiddlewareOptions } from './performance-middleware.js';
+import { ErrorHandlingMiddleware as ErrorMW, DevelopmentErrorHandlingMiddleware, ProductionErrorHandlingMiddleware, ResilientErrorHandlingMiddleware, ErrorHandlingMiddlewareOptions } from './error-handling-middleware.js';
+
 // Logging Middleware
 export {
   LoggingMiddleware,
@@ -106,27 +114,27 @@ export class BuiltinMiddlewareFactory {
 
     // Add middlewares in execution order (by priority)
     if (options.authentication !== false) {
-      middlewares.push(AuthenticationMiddleware);
+      middlewares.push(AuthMW);
     }
     
     if (options.validation !== false) {
-      middlewares.push(ValidationMiddleware);
+      middlewares.push(ValidationMW);
     }
     
     if (options.caching !== false) {
-      middlewares.push(CacheMiddleware);
+      middlewares.push(CacheMW);
     }
     
     if (options.logging !== false) {
-      middlewares.push(LoggingMiddleware);
+      middlewares.push(LoggingMW);
     }
     
     if (options.performance !== false) {
-      middlewares.push(PerformanceMiddleware);
+      middlewares.push(PerfMW);
     }
     
     if (options.errorHandling !== false) {
-      middlewares.push(ErrorHandlingMiddleware);
+      middlewares.push(ErrorMW);
     }
 
     return middlewares;
@@ -191,7 +199,7 @@ export class BuiltinMiddlewareFactory {
   static createMinimalStack(): Array<new (...args: any[]) => any> {
     return [
       ErrorOnlyLoggingMiddleware,
-      ErrorHandlingMiddleware
+      ErrorMW
     ];
   }
 }
