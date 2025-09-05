@@ -27,9 +27,9 @@ describe('PluginConfigManager', () => {
     
     // Mock file system defaults
     mockFs.existsSync.mockReturnValue(false);
-    mockFs.promises.readdir.mockResolvedValue([]);
-    mockFs.promises.readFile.mockResolvedValue('{}');
-    mockFs.promises.writeFile.mockResolvedValue(void 0);
+    (mockFs.promises.readdir as jest.MockedFunction<any>).mockResolvedValue([]);
+    (mockFs.promises.readFile as jest.MockedFunction<typeof fs.promises.readFile>).mockResolvedValue('{}');
+    (mockFs.promises.writeFile as jest.MockedFunction<typeof fs.promises.writeFile>).mockResolvedValue(void 0);
     
     // Create fresh instances
     configManager = new ConfigManager();
@@ -169,7 +169,7 @@ describe('PluginConfigManager', () => {
         config: { enabled: true, fromFile: true }
       };
       
-      mockFs.promises.readFile.mockResolvedValue(JSON.stringify(configData));
+      (mockFs.promises.readFile as jest.MockedFunction<typeof fs.promises.readFile>).mockResolvedValue(JSON.stringify(configData));
       
       await pluginConfigManager.loadPluginConfigFromFile('test-plugin', '/test/config.json');
       
@@ -208,7 +208,7 @@ describe('PluginConfigManager', () => {
   describe('Configuration Discovery', () => {
     it('should discover plugin configuration files', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.promises.readdir.mockResolvedValue([
+      (mockFs.promises.readdir as jest.MockedFunction<any>).mockResolvedValue([
         'plugin1.config.json',
         'plugin2.config.yaml',
         'not-a-config.txt',
@@ -225,8 +225,8 @@ describe('PluginConfigManager', () => {
 
     it('should load all discovered configurations', async () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.promises.readdir.mockResolvedValue(['plugin1.config.json']);
-      mockFs.promises.readFile.mockResolvedValue(JSON.stringify({
+      (mockFs.promises.readdir as jest.MockedFunction<any>).mockResolvedValue(['plugin1.config.json']);
+      (mockFs.promises.readFile as jest.MockedFunction<typeof fs.promises.readFile>).mockResolvedValue(JSON.stringify({
         config: { discovered: true }
       }));
       

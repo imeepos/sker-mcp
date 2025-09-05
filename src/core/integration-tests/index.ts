@@ -19,7 +19,7 @@ export class IntegrationTestUtils {
    */
   static async setupTestEnvironment(): Promise<void> {
     // Common test environment setup
-    process.env.NODE_ENV = 'test';
+    process.env.NODE_ENV = 'testing';
     process.env.LOG_LEVEL = 'error'; // Reduce log noise during tests
   }
 

@@ -35,7 +35,7 @@ describe('ConfigManager', () => {
     
     // Mock file system defaults
     mockFs.existsSync.mockReturnValue(false);
-    mockFs.mkdirSync.mockImplementation(() => {});
+    (mockFs.mkdirSync as jest.MockedFunction<any>).mockImplementation(() => {});
     mockFs.watch.mockReturnValue({
       close: jest.fn()
     } as any);

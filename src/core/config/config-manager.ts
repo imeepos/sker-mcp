@@ -654,9 +654,9 @@ export class ConfigManager extends EventEmitter {
 }
 
 /**
- * Global configuration manager instance
+ * Get global configuration manager instance (lazy initialization)
  */
-export const configManager = new ConfigManager();
+export const getConfigManager = () => new ConfigManager();
 
 /**
  * Configuration manager factory
