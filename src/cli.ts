@@ -106,7 +106,7 @@ class SkerCli {
    */
   private addCommand(command: CliCommand): void {
     this.commands.set(command.name, command);
-    
+
     // Register aliases
     if (command.aliases) {
       for (const alias of command.aliases) {
@@ -135,7 +135,7 @@ class SkerCli {
         // Long option
         const optionName = arg.slice(2);
         const nextArg = args[i + 1];
-        
+
         if (nextArg && !nextArg.startsWith('-')) {
           result.options[optionName] = nextArg;
           i += 2;
@@ -147,7 +147,7 @@ class SkerCli {
         // Short option
         const optionName = arg.slice(1);
         const nextArg = args[i + 1];
-        
+
         if (nextArg && !nextArg.startsWith('-')) {
           result.options[optionName] = nextArg;
           i += 2;
@@ -353,7 +353,7 @@ class SkerCli {
       const projectManager = injector.get(PROJECT_MANAGER) as ProjectManager;
 
       const plugins = await projectManager.scanPluginsDirectory();
-      
+
       console.log(`🔌 Available Plugins (${plugins.length}):\n`);
 
       if (plugins.length === 0) {
@@ -470,7 +470,7 @@ class SkerCli {
 
       console.log(`Sker Daemon MCP Server v${packageJson.version}`);
       console.log(`Node.js ${process.version}`);
-      
+
     } catch (error) {
       console.log('Sker Daemon MCP Server (version unknown)');
       if (options.debug) {
@@ -487,11 +487,11 @@ class SkerCli {
       const cmd = this.commands.get(command)!;
       console.log(`Usage: sker ${cmd.name} ${cmd.args?.join(' ') || ''}`);
       console.log(`\n${cmd.description}`);
-      
+
       if (cmd.aliases && cmd.aliases.length > 0) {
         console.log(`\nAliases: ${cmd.aliases.join(', ')}`);
       }
-      
+
       return;
     }
 
@@ -558,7 +558,7 @@ Environment Variables:
 
     // Find and execute command
     const command = this.commands.get(parsed.command);
-    
+
     if (!command) {
       console.error(`❌ Unknown command: ${parsed.command}`);
       console.log('\nRun "sker help" to see available commands');
@@ -586,9 +586,7 @@ async function main(): Promise<void> {
 }
 
 // Only run if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    console.error('💥 CLI execution failed:', error);
-    process.exit(1);
-  });
-}
+main().catch((error) => {
+  console.error('💥 CLI execution failed:', error);
+  process.exit(1);
+});
