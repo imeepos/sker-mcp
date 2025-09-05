@@ -172,6 +172,7 @@ export class ServicePreBindingManager {
       // Create pre-bound tool
       const preBoundTool: PreBoundTool = {
         ...toolMetadata,
+        inputSchema: toolMetadata.inputSchema || { type: 'object', properties: {} } as any,
         boundService: preBoundService,
         boundHandler,
         handler: boundHandler // Use the bound handler as the main handler
@@ -757,9 +758,9 @@ export class ServicePreBindingManager {
     serviceClass: new (...args: any[]) => any,
     isolatedInstance: IsolatedPluginInstance
   ): Promise<{
-    tools?: Array<Omit<IMcpTool, 'handler'>>;
-    resources?: Array<Omit<IMcpResource, 'handler'>>;
-    prompts?: Array<Omit<IMcpPrompt, 'handler'>>;
+    tools?: Array<Omit<IMcpTool, 'handler'> & { name: string }>;
+    resources?: Array<Omit<IMcpResource, 'handler'> & { name?: string, uri: string }>;
+    prompts?: Array<Omit<IMcpPrompt, 'handler'> & { name: string }>;
   }> {
     // This would use reflection to extract metadata from decorators
     // For now, return empty metadata - this would be implemented based on

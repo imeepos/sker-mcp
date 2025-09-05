@@ -6,15 +6,22 @@
  * consistency across the entire architecture.
  */
 
-import type { 
-  Tool, 
-  Resource, 
+import type {
+  Tool,
+  Resource,
   Prompt,
   CallToolRequest,
   ReadResourceRequest,
   GetPromptRequest
 } from '@modelcontextprotocol/sdk/types.js';
 import type { z } from 'zod';
+
+// Re-export MCP SDK types for use in other modules
+export type {
+  CallToolRequest,
+  ReadResourceRequest,
+  GetPromptRequest
+} from '@modelcontextprotocol/sdk/types.js';
 
 // ==================== MCP Interface Types ====================
 

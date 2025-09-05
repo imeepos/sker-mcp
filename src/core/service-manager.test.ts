@@ -442,8 +442,15 @@ describe('ServiceManager', () => {
 
   describe('Advanced Error Scenarios', () => {
     it('should_handle_initialization_with_null_logger', () => {
+      const mockLogger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn()
+      };
       expect(() => {
-        new ServiceManager(mockTools, mockResources, mockPrompts, mockConfig, null);
+        new ServiceManager(mockTools, mockResources, mockPrompts, mockConfig, mockLogger as any);
       }).not.toThrow();
     });
 

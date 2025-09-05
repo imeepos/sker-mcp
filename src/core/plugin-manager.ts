@@ -11,7 +11,7 @@ import { PROJECT_MANAGER, LOGGER } from './tokens.js';
 import { ProjectManager } from './project-manager.js';
 import type { IPlugin, IPluginManager } from './types.js';
 import { PluginStatus } from './types.js';
-import { 
+import {
   FeatureInjector,
   PluginDiscovery,
   PluginLoader,
@@ -19,7 +19,9 @@ import {
   PluginDiscoveryUtils,
   PluginLoaderUtils,
   IsolationLevel,
-  PluginIsolationUtils
+  PluginIsolationUtils,
+  ConflictType,
+  ResolutionStrategy
 } from './plugins/index.js';
 import type {
   IWinstonLogger
@@ -344,8 +346,13 @@ export class PluginManager implements IPluginManager {
         this.projectManager.getPluginsDirectory()
       );
 
-      // Initialize conflict detector with default rules
-      await this.conflictDetector.initialize();
+      // Configure conflict detector with default rules
+      this.conflictDetector.configure({
+        enabled: true,
+        strategies: Object.values(ConflictType),
+        defaultResolution: ResolutionStrategy.MANUAL,
+        pluginPriorities: []
+      });
 
       // Discover existing plugins
       const discoveryOptions = PluginDiscoveryUtils.createDefaultOptions();
@@ -591,7 +598,8 @@ export class PluginManager implements IPluginManager {
    */
   private async detectAndResolveConflicts(plugin: IPlugin): Promise<void> {
     const existingPlugins = Array.from(this.activePlugins.values());
-    const conflicts = await this.conflictDetector.detectConflicts(plugin, existingPlugins);
+    const allPlugins = [...existingPlugins, plugin];
+    const conflicts = this.conflictDetector.detectConflicts(allPlugins);
 
     if (conflicts.length > 0) {
       this.logger.warn('Plugin conflicts detected', {
