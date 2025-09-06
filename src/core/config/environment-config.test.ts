@@ -8,6 +8,7 @@
 import { EnvironmentConfigProcessor, EnvironmentUtils } from './environment-config.js';
 import { ConfigValidator } from './config-schema.js';
 import os from 'os';
+import path from 'path';
 
 describe('EnvironmentConfigProcessor', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -66,7 +67,7 @@ describe('EnvironmentConfigProcessor', () => {
   describe('Directory Configuration', () => {
     it('should provide default Sker home directory', () => {
       const homeDir = EnvironmentConfigProcessor.getSkerHomeDir();
-      expect(homeDir).toBe(os.homedir() + '/.sker');
+      expect(homeDir).toBe(path.join(os.homedir(), '.sker'));
     });
 
     it('should use custom Sker home directory from environment', () => {
@@ -77,17 +78,20 @@ describe('EnvironmentConfigProcessor', () => {
 
     it('should provide configuration directory', () => {
       const configDir = EnvironmentConfigProcessor.getConfigDir();
-      expect(configDir).toContain('.sker/config');
+      expect(configDir).toContain('.sker');
+      expect(configDir).toContain('config');
     });
 
     it('should provide log directory', () => {
       const logDir = EnvironmentConfigProcessor.getLogDir();
-      expect(logDir).toContain('.sker/logs');
+      expect(logDir).toContain('.sker');
+      expect(logDir).toContain('logs');
     });
 
     it('should provide plugin directory', () => {
       const pluginDir = EnvironmentConfigProcessor.getPluginDir();
-      expect(pluginDir).toContain('.sker/plugins');
+      expect(pluginDir).toContain('.sker');
+      expect(pluginDir).toContain('plugins');
     });
   });
 
@@ -245,13 +249,13 @@ describe('EnvironmentConfigProcessor', () => {
     it('should process relative plugin directories', () => {
       process.env.SKER_HOME_DIR = '/test/sker';
       process.env.SKER_PLUGIN_DIRECTORIES = 'plugins,extra';
-      
+
       const config = EnvironmentConfigProcessor.loadFromEnvironment();
       const processed = EnvironmentConfigProcessor.processDirectoryConfig(config);
-      
+
       expect(processed.plugins?.discovery?.directories).toEqual([
-        '/test/sker/plugins',
-        '/test/sker/extra'
+        path.join('/test/sker', 'plugins'),
+        path.join('/test/sker', 'extra')
       ]);
     });
 
@@ -326,8 +330,9 @@ describe('EnvironmentUtils', () => {
   describe('Directory Management', () => {
     it('should provide all directories', () => {
       const directories = EnvironmentUtils.getDirectories();
-      
-      expect(directories.home).toContain('.sker');
+
+      // In test environment, SKER_HOME_DIR is set to './test-sker-home'
+      expect(directories.home).toContain('test-sker-home');
       expect(directories.config).toContain('config');
       expect(directories.logs).toContain('logs');
       expect(directories.plugins).toContain('plugins');
