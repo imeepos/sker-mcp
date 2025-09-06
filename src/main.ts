@@ -131,7 +131,7 @@ class MainApplication {
    * Shows help information
    */
   private showHelp(): void {
-    console.log(`
+    console.error(`
 Sker Daemon MCP Server
 
 Usage: sker-mcp [options]
@@ -160,7 +160,7 @@ Examples:
    * Initializes the dependency injection container
    */
   private setupDependencyInjection(): void {
-    console.log('Setting up dependency injection...');
+    console.error('Setting up dependency injection...');
 
     // Create injector with all providers
     const providers = [
@@ -170,7 +170,7 @@ Examples:
 
     this.injector = createPlatformInjector(providers);
 
-    console.log('Dependency injection configured successfully');
+    console.error('Dependency injection configured successfully');
   }
 
   /**
@@ -181,7 +181,7 @@ Examples:
       throw new Error('Injector not initialized');
     }
 
-    console.log('Creating MCP application...');
+    console.error('Creating MCP application...');
 
     try {
       // Create the main application instance
@@ -194,7 +194,7 @@ Examples:
       // Set up graceful shutdown
       this.application.setupGracefulShutdown();
 
-      console.log('MCP application created successfully');
+      console.error('MCP application created successfully');
 
     } catch (error) {
       console.error('Failed to create MCP application:', error);
@@ -210,17 +210,17 @@ Examples:
       throw new Error('Application not created');
     }
 
-    console.log('Starting MCP application...');
+    console.error('Starting MCP application...');
 
     try {
       await this.application.start();
 
-      console.log('✅ Sker Daemon MCP Server is running');
-      console.log('📡 Transport: stdio');
-      console.log('📁 Home directory:', process.env.SKER_HOME_DIR || '~/.sker');
+      console.error('✅ Sker Daemon MCP Server is running');
+      console.error('📡 Transport: stdio');
+      console.error('📁 Home directory:', process.env.SKER_HOME_DIR || '~/.sker');
 
       if (this.config.debug) {
-        console.log('🐛 Debug mode is enabled');
+        console.error('🐛 Debug mode is enabled');
       }
 
       // Keep the process alive
@@ -243,7 +243,7 @@ Examples:
     if (this.config.debug) {
       const statusInterval = setInterval(() => {
         if (this.application?.isRunning()) {
-          console.log(`🟢 Status: ${this.application.getStatus()}`);
+          console.error(`🟢 Status: ${this.application.getStatus()}`);
         } else {
           clearInterval(statusInterval);
         }
@@ -256,7 +256,7 @@ Examples:
    */
   async run(): Promise<void> {
     try {
-      console.log('🚀 Starting Sker Daemon MCP Server...');
+      console.error('🚀 Starting Sker Daemon MCP Server...');
 
       // Apply environment variable overrides
       if (this.config.homeDir) {

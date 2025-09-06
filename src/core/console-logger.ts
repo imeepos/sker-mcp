@@ -59,19 +59,19 @@ export class ConsoleLogger implements Logger {
 
   info(message: string, meta?: any): void {
     if (this.shouldLog('info')) {
-      console.log(this.formatMessage('info', message, meta));
+      console.error(this.formatMessage('info', message, meta));
     }
   }
 
   debug(message: string, meta?: any): void {
     if (this.shouldLog('debug')) {
-      console.log(this.formatMessage('debug', message, meta));
+      console.error(this.formatMessage('debug', message, meta));
     }
   }
 
   trace(message: string, meta?: any): void {
     if (this.shouldLog('trace')) {
-      console.log(this.formatMessage('trace', message, meta));
+      console.error(this.formatMessage('trace', message, meta));
     }
   }
 }
