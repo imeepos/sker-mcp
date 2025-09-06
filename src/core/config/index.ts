@@ -14,6 +14,9 @@
  * - Type-safe configuration access
  */
 
+import type { ProjectManager } from '../project-manager.js';
+import type { IWinstonLogger } from '../logging/winston-logger.js';
+
 // === Core Exports ===
 
 // Schema definitions and validation
@@ -88,17 +91,20 @@ export class ConfigurationSystem {
   private _pluginConfigManager: PluginConfigManager;
   private _initialized = false;
   
-  constructor() {
-    this._configManager = new ConfigManager();
+  constructor(projectManager: ProjectManager, logger: IWinstonLogger) {
+    this._configManager = new ConfigManager(projectManager, logger);
     this._pluginConfigManager = new PluginConfigManager(this._configManager);
   }
   
   /**
    * Get singleton instance
    */
-  static getInstance(): ConfigurationSystem {
+  static getInstance(projectManager?: ProjectManager, logger?: IWinstonLogger): ConfigurationSystem {
     if (!ConfigurationSystem.instance) {
-      ConfigurationSystem.instance = new ConfigurationSystem();
+      if (!projectManager || !logger) {
+        throw new Error('ConfigurationSystem requires ProjectManager and Logger dependencies on first initialization');
+      }
+      ConfigurationSystem.instance = new ConfigurationSystem(projectManager, logger);
     }
     return ConfigurationSystem.instance;
   }

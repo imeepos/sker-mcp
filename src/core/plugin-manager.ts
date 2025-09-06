@@ -6,31 +6,35 @@
  * conflict detection, and service instance pre-binding capabilities.
  */
 
-import { Injectable, Inject } from '@sker/di';
-import { PROJECT_MANAGER, LOGGER } from './tokens.js';
-import { ProjectManager } from './project-manager.js';
-import type { IPlugin, IPluginManager } from './types.js';
-import { PluginStatus } from './types.js';
+import { Injectable, Inject, Injector, Provider, createApplicationInjector } from '@sker/di';
+import { 
+  PROJECT_MANAGER, 
+  LOGGER,
+  ProjectManager,
+  type IPlugin, 
+  type IPluginManager,
+  PluginStatus
+} from '@sker/mcp';
 import {
   FeatureInjector,
   PluginDiscovery,
   PluginLoader,
+  PluginIsolationLevel as IsolationLevel
+} from '@sker/mcp';
+import {
   PluginConflictDetector,
   PluginDiscoveryUtils,
   PluginLoaderUtils,
-  IsolationLevel,
   PluginIsolationUtils,
   ConflictType,
   ResolutionStrategy
 } from './plugins/index.js';
 import type {
-  IWinstonLogger
-} from './logging/winston-logger.js';
-import type {
+  IWinstonLogger,
   DiscoveredPlugin,
   PluginLoadResult,
   IsolatedPluginInstance
-} from './plugins/index.js';
+} from '@sker/mcp';
 
 /**
  * Enhanced Plugin Manager Implementation
@@ -54,15 +58,31 @@ export class PluginManager implements IPluginManager {
 
   constructor(
     @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
-    @Inject(LOGGER) private readonly logger: IWinstonLogger
+    @Inject(LOGGER) private readonly logger: IWinstonLogger,
+    private readonly applicationInjector?: Injector
   ) {
-    // Initialize plugin system components
-    this.featureInjector = new FeatureInjector(this.projectManager as any); // TODO: Fix injector reference
+    // Initialize plugin system components with proper injector reference
+    this.featureInjector = new FeatureInjector(
+      this.applicationInjector || this.createFallbackInjector()
+    );
     this.pluginDiscovery = new PluginDiscovery(this.projectManager, this.logger);
     this.pluginLoader = new PluginLoader(this.logger, this.projectManager);
     this.conflictDetector = new PluginConflictDetector(this.logger);
     
     this.logger.debug('PluginManager initialized with Feature Injector architecture');
+  }
+
+  /**
+   * Create fallback injector when no application injector is provided
+   */
+  private createFallbackInjector(): Injector {
+    // This is a simplified fallback - in practice, you'd want to pass the actual application injector
+    const fallbackProviders: Provider[] = [
+      { provide: PROJECT_MANAGER, useValue: this.projectManager },
+      { provide: LOGGER, useValue: this.logger }
+    ];
+    
+    return createApplicationInjector(fallbackProviders);
   }
 
   /**
@@ -604,7 +624,7 @@ export class PluginManager implements IPluginManager {
     if (conflicts.length > 0) {
       this.logger.warn('Plugin conflicts detected', {
         plugin: plugin.name,
-        conflicts: conflicts.map(c => ({ type: c.type, severity: c.severity }))
+        conflicts: conflicts.map((c: any) => ({ type: c.type, severity: c.severity }))
       });
 
       // For now, log conflicts but don't block loading

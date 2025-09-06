@@ -18,6 +18,11 @@ import {
   EnvironmentConfigProcessor, 
   EnvironmentUtils 
 } from './environment-config.js';
+import { Injectable, Inject } from '@sker/di';
+import { PROJECT_MANAGER, LOGGER } from '../tokens.js';
+import type { ProjectManager } from '../project-manager.js';
+import type { IWinstonLogger } from '../logging/winston-logger.js';
+import type { IMcpServerConfig } from '../types.js';
 import { EventEmitter } from 'events';
 import path from 'path';
 import fs from 'fs';
@@ -87,8 +92,9 @@ export interface ConfigLoadOptions {
 }
 
 /**
- * Core configuration manager
+ * Core configuration manager with dependency injection support
  */
+@Injectable()
 export class ConfigManager extends EventEmitter {
   private readonly _sources = new Map<string, ConfigSourceMeta>();
   private _config: Config;
@@ -96,7 +102,10 @@ export class ConfigManager extends EventEmitter {
   private _fileWatchers = new Map<string, fs.FSWatcher>();
   private _hotReloadEnabled = false;
   
-  constructor() {
+  constructor(
+    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
+    @Inject(LOGGER) private readonly logger: IWinstonLogger
+  ) {
     super();
     this._config = ConfigValidator.getDefaults();
     this.initialize();
@@ -131,6 +140,13 @@ export class ConfigManager extends EventEmitter {
    */
   getConfig(): Config {
     return this._config;
+  }
+
+  /**
+   * Get MCP server compatible configuration
+   */
+  getMcpConfig(): IMcpServerConfig {
+    return this.convertToMcpConfig(this._config);
   }
   
   /**
@@ -651,12 +667,70 @@ export class ConfigManager extends EventEmitter {
   private getNestedValue(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
+
+  /**
+   * Convert internal Config to IMcpServerConfig format
+   */
+  private convertToMcpConfig(config: Config): IMcpServerConfig {
+    return {
+      name: config.server?.name || 'sker-daemon',
+      version: config.server?.version || '1.0.0',
+      capabilities: {
+        tools: {},
+        resources: {},
+        prompts: {}
+      },
+      plugins: {
+        enabled: ['core']
+      },
+      transport: { type: 'stdio' as const },
+      logging: {
+        level: config.logging?.level || 'info',
+        format: config.logging?.format || 'text'
+      }
+    };
+  }
+
+  /**
+   * Load plugin-specific configuration (compatible with design docs)
+   */
+  async loadPluginConfig(pluginName: string, pluginPath: string): Promise<any> {
+    const configPath = path.join(pluginPath, 'plugin.config.json');
+    
+    try {
+      await fs.promises.access(configPath);
+      const configData = await fs.promises.readFile(configPath, 'utf-8');
+      const pluginConfig = JSON.parse(configData);
+      
+      this.logger.debug('Plugin configuration loaded', { pluginName, configPath });
+      return pluginConfig;
+      
+    } catch (error) {
+      // Create default plugin configuration if file doesn't exist
+      const defaultConfig = {
+        name: pluginName,
+        enabled: true,
+        autoLoad: true,
+        version: '1.0.0',
+        description: `Plugin ${pluginName}`,
+        main: 'index.js'
+      };
+      
+      this.logger.debug('Using default plugin configuration', { pluginName });
+      return defaultConfig;
+    }
+  }
 }
 
 /**
  * Get global configuration manager instance (lazy initialization)
  */
-export const getConfigManager = () => new ConfigManager();
+export const getConfigManager = (projectManager?: ProjectManager, logger?: IWinstonLogger) => {
+  if (projectManager && logger) {
+    return new ConfigManager(projectManager, logger);
+  }
+  throw new Error('ConfigManager requires ProjectManager and Logger dependencies');
+};
 
 /**
  * Configuration manager factory
@@ -667,9 +741,12 @@ export class ConfigManagerFactory {
   /**
    * Get or create configuration manager instance
    */
-  static getInstance(name = 'default'): ConfigManager {
+  static getInstance(name = 'default', projectManager?: ProjectManager, logger?: IWinstonLogger): ConfigManager {
     if (!ConfigManagerFactory.instances.has(name)) {
-      ConfigManagerFactory.instances.set(name, new ConfigManager());
+      if (!projectManager || !logger) {
+        throw new Error('ConfigManager requires ProjectManager and Logger dependencies');
+      }
+      ConfigManagerFactory.instances.set(name, new ConfigManager(projectManager, logger));
     }
     
     return ConfigManagerFactory.instances.get(name)!;
@@ -678,8 +755,8 @@ export class ConfigManagerFactory {
   /**
    * Create new configuration manager instance
    */
-  static createInstance(name: string): ConfigManager {
-    const instance = new ConfigManager();
+  static createInstance(name: string, projectManager: ProjectManager, logger: IWinstonLogger): ConfigManager {
+    const instance = new ConfigManager(projectManager, logger);
     ConfigManagerFactory.instances.set(name, instance);
     return instance;
   }

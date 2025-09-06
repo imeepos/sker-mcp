@@ -7,21 +7,19 @@
  */
 
 import { Injectable, Inject } from '@sker/di';
-import { ProjectManager } from './project-manager.js';
 import { 
+  ProjectManager,
   MCP_SERVER_CONFIG, 
   SERVICE_MANAGER,
   PROJECT_MANAGER,
   PLUGIN_MANAGER,
-  LOGGER
-} from './tokens.js';
-import type { 
-  IMcpTool, 
-  IMcpResource, 
-  IMcpPrompt, 
-  IMcpServerConfig,
-  IPluginManager 
-} from './types.js';
+  LOGGER,
+  type IMcpTool, 
+  type IMcpResource, 
+  type IMcpPrompt, 
+  type IMcpServerConfig,
+  type IPluginManager 
+} from '@sker/mcp';
 
 /**
  * Application status enumeration

@@ -27,13 +27,13 @@ import {
   MCP_RESOURCES,
   MCP_PROMPTS,
   LOGGER
-} from './tokens.js';
+} from '@sker/mcp';
 import type { 
   IMcpTool, 
   IMcpResource, 
   IMcpPrompt, 
   IMcpServerConfig 
-} from './types.js';
+} from '@sker/mcp';
 import { ServicePreBindingManager } from './service-prebinding.js';
 import type {
   PreBoundTool,

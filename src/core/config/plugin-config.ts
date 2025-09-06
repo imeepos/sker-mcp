@@ -90,9 +90,9 @@ export class PluginConfigManager extends EventEmitter {
   private readonly _configSchemas = new Map<string, any>();
   private readonly _defaultConfigs = new Map<string, any>();
   
-  constructor(configManager?: ConfigManager) {
+  constructor(configManager: ConfigManager) {
     super();
-    this._configManager = configManager || new ConfigManager();
+    this._configManager = configManager;
     this.initialize();
   }
   
@@ -594,9 +594,9 @@ let defaultPluginConfigManager: PluginConfigManager | undefined;
 /**
  * Get default plugin configuration manager
  */
-export function getDefaultPluginConfigManager(): PluginConfigManager {
+export function getDefaultPluginConfigManager(configManager: ConfigManager): PluginConfigManager {
   if (!defaultPluginConfigManager) {
-    defaultPluginConfigManager = new PluginConfigManager();
+    defaultPluginConfigManager = new PluginConfigManager(configManager);
   }
   return defaultPluginConfigManager;
 }
@@ -610,7 +610,7 @@ export class PluginConfigManagerFactory {
   /**
    * Get or create plugin configuration manager instance
    */
-  static getInstance(name = 'default', configManager?: ConfigManager): PluginConfigManager {
+  static getInstance(name = 'default', configManager: ConfigManager): PluginConfigManager {
     if (!PluginConfigManagerFactory.instances.has(name)) {
       PluginConfigManagerFactory.instances.set(name, new PluginConfigManager(configManager));
     }

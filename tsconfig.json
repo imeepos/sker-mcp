@@ -12,7 +12,14 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@sker/mcp": ["./core/index.ts"],
+      "@sker/mcp/*": ["./core/*"],
+      "@sker/di": ["../node_modules/@sker/di"],
+      "@sker/di/*": ["../node_modules/@sker/di/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
