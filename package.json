@@ -1,6 +1,6 @@
 {
   "name": "@sker/mcp",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Sker Daemon MCP Server - A decorator-driven MCP server with dependency injection",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
