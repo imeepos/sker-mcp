@@ -282,9 +282,11 @@ export function getEnvironmentInfo() {
 // === Default Export ===
 
 /**
- * Default configuration system instance
+ * Default configuration system instance factory
+ * Note: Returns null by default to prevent initialization errors
+ * Use ConfigurationSystem.getInstance(projectManager, logger) explicitly
  */
-export default ConfigurationSystem.getInstance();
+export default null;
 
 // === Type-only Exports ===
 
