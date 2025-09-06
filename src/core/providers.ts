@@ -49,6 +49,7 @@ import { PluginManager } from './plugin-manager.js';
 import { ConsoleLogger } from './console-logger.js';
 import { MiddlewareExecutor } from './middleware/index.js';
 import { ErrorManager } from './errors/index.js';
+import { McpApplication } from './mcp-application.js';
 
 /**
  * Default MCP server configuration
@@ -84,25 +85,22 @@ export function createMcpProviders(): Provider[] {
       useValue: DEFAULT_MCP_CONFIG
     },
     
-    // MCP Tools Collection Provider - supports multi-injection with type safety
+    // MCP Tools Collection Provider - uses factory from token
     {
       provide: MCP_TOOLS,
-      useValue: [] as McpToolDefinition[],
-      multi: true
+      useFactory: () => []
     },
     
-    // MCP Resources Collection Provider - supports multi-injection with type safety
+    // MCP Resources Collection Provider - uses factory from token
     {
       provide: MCP_RESOURCES,
-      useValue: [] as McpResourceDefinition[],
-      multi: true
+      useFactory: () => []
     },
     
-    // MCP Prompts Collection Provider - supports multi-injection with type safety
+    // MCP Prompts Collection Provider - uses factory from token
     {
       provide: MCP_PROMPTS,
-      useValue: [] as McpPromptDefinition[],
-      multi: true
+      useFactory: () => []
     }
   ];
 }
@@ -119,6 +117,12 @@ export function createPlatformProviders(): Provider[] {
     {
       provide: APP_NAME,
       useValue: 'sker-mcp'
+    },
+
+    // MCP Application provider
+    {
+      provide: McpApplication,
+      useClass: McpApplication
     },
     
     // Manager class providers - using actual implementations
