@@ -15,7 +15,7 @@
  * - Logger tokens for logging infrastructure
  */
 
-import { InjectionToken, StringToken, SymbolToken } from '@sker/di';
+import { InjectionToken, Injector, StringToken, SymbolToken } from '@sker/di';
 import { Logger } from './console-logger';
 
 // === Type Definitions ===
@@ -168,7 +168,7 @@ export const DEBUG_MODE: SymbolToken<boolean> = Symbol('DEBUG_MODE') as SymbolTo
 /**
  * Token for Feature Injector service
  */
-export const FEATURE_INJECTOR = new InjectionToken<any>('FEATURE_INJECTOR');
+export const FEATURE_INJECTOR = new InjectionToken<Injector>('FEATURE_INJECTOR');
 
 /**
  * Token for Plugin Conflict Detector service  

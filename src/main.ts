@@ -16,8 +16,6 @@
 
 import { createPlatformInjector, createRootInjector } from '@sker/di';
 import { AppBootstrap, AppConfig } from './common/app-bootstrap.js';
-
-process.env.LOG_LEVEL=`trace`
 /**
  * 主应用程序类
  */

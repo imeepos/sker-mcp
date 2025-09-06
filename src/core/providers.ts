@@ -31,20 +31,12 @@ import {
   LOGGING_CONFIG,
   PLUGIN_CONFIG,
   APP_NAME,
-  type McpServerConfig,
-  type McpToolDefinition,
-  type McpResourceDefinition,
-  type McpPromptDefinition,
-  type LoggerConfig
+  type McpServerConfig
 } from './tokens.js';
-import { ServiceManager } from './service-manager.js';
 import { ProjectManager } from './project-manager.js';
-import { PluginManager } from './plugin-manager.js';
-import { ConsoleLogger } from './console-logger.js';
-import { MiddlewareExecutor } from './middleware/index.js';
-import { ErrorManager } from './errors/index.js';
 import { McpApplication } from './mcp-application.js';
 import { getLoggingConfig } from './logging/logging-config.js';
+import { LayeredLoggerFactory } from './logging/layered-logger.js';
 
 /**
  * Default MCP server configuration
@@ -113,13 +105,11 @@ export function createPlatformProviders(): Provider[] {
       provide: APP_NAME,
       useValue: 'sker-mcp'
     },
-
     // MCP Application provider
     {
       provide: McpApplication,
       useClass: McpApplication
     },
-    
     // Logger configuration provider - uses environment-based configuration
     {
       provide: LOGGER_CONFIG,
@@ -136,17 +126,15 @@ export function createPlatformProviders(): Provider[] {
       },
       deps: [LOGGER_CONFIG, ProjectManager]
     },
-    
     // Main logger provider - using Layered logger system
     {
       provide: LOGGER,
-      useFactory: (layeredLoggerFactory: any) => {
+      useFactory: (layeredLoggerFactory: LayeredLoggerFactory) => {
         const factory = layeredLoggerFactory as any;
         return factory.createPlatformLogger('system');
       },
       deps: [LAYERED_LOGGER_FACTORY]
     },
-    
     // Plugin system providers
     ...createPluginSystemProviders(),
     
