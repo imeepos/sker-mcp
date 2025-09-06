@@ -186,9 +186,102 @@
 - [x] 实现配置验证 ✅
 - [x] 支持插件特定配置 ✅
 
-### Phase 4: 高级功能完善 (Week 4-5) - **CURRENT PRIORITY**
+### Phase 4: CLI 体验优化详细实施计划 (Week 5-6) - **CURRENT PRIORITY** 💻
 
-#### 4.1 企业级中间件系统 - 🎯 **NEXT PRIORITY**
+#### 4.1 现代化 CLI 框架实现 (Week 5.1-5.3)
+```typescript
+// 技术栈选择
+- commander.js / yargs - 现代 CLI 框架
+- chalk - 彩色终端输出
+- ora - 优雅的加载指示器
+- inquirer - 交互式提示
+- boxen - 美观的终端框架
+
+// 私有 npm 和 TypeScript 支持
+- npm-registry-fetch - npm 私有仓库 API 调用
+- npmrc - npm 配置文件管理
+- typescript - TypeScript 编译器
+- ts-node - TypeScript 直接执行
+- @types/* - TypeScript 类型定义
+- semver - 版本管理工具
+```
+
+**具体任务**:
+- [ ] 实现 `src/cli/cli-application.ts` - 新 CLI 主应用类
+- [ ] 重构 `src/main.ts` - 支持 CLI 和服务器双模式  
+- [ ] 实现子命令架构 - `src/cli/commands/` 目录结构
+- [ ] 彩色输出和主题 - `src/cli/utils/output.ts`
+- [ ] 进度条和状态管理 - `src/cli/utils/progress.ts`
+
+#### 4.2 基于私有 npm 的插件管理系统 (Week 5.3-6.1)
+```typescript
+// TypeScript 插件包结构标准
+{
+  "name": "@sker-plugins/example-plugin",
+  "version": "1.0.0",
+  "description": "Example Sker MCP Plugin",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": ["sker", "mcp", "plugin"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "sker": {
+    "compatibility": "^1.0.0",
+    "type": "plugin",
+    "category": ["utility", "development"],
+    "entry": "dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
+```
+
+**具体任务**:
+- [ ] 实现 `src/cli/utils/npm-wrapper.ts` - 私有 npm 仓库支持和认证
+- [ ] 实现 `sker auth login` - 私有 npm 仓库登录管理
+- [ ] 实现 `sker plugin install <name>` - 私有仓库安装 + 插件注册
+- [ ] 实现 `sker plugin uninstall <name>` - 卸载 + 插件注销
+- [ ] 实现 `sker plugin update [name]` - 私有仓库更新 + 插件重载
+- [ ] 实现 `sker plugin list` - 解析已安装的 TypeScript 插件
+- [ ] 实现 `sker plugin search <query>` - 私有仓库搜索和过滤
+- [ ] 实现 `sker plugin create <name>` - TypeScript 插件脚手架生成
+
+#### 4.3 交互式开发工具 (Week 6.1-6.2)
+```bash
+# 命令示例
+sker init                    # 项目初始化向导
+sker config set transport.type http  # 配置管理
+sker dev                     # 开发模式启动
+sker plugin list             # 插件状态查看
+sker diagnostic              # 系统诊断
+```
+
+**具体任务**:
+- [ ] 实现 `sker init` - 交互式项目初始化向导
+- [ ] 实现 `sker config` - 配置可视化管理命令
+- [ ] 实现 `sker dev` - 热重载开发服务器
+- [ ] 实现 `sker plugin` - 完整插件管理命令集
+- [ ] 实现 `sker diagnostic` - 系统健康检查工具
+- [ ] 实现实时日志查看 - `sker logs --follow`
+
+#### 4.4 TypeScript 脚手架和自动化功能 (Week 6.2-6.3)
+**具体任务**:
+- [ ] 实现 TypeScript 插件模板系统 - `src/cli/templates/plugin/`
+- [ ] 实现 TypeScript 项目模板系统 - `src/cli/templates/project/`
+- [ ] 实现插件构建工具 - `sker plugin build` (TypeScript 编译)
+- [ ] 实现插件发布流程 - `sker plugin publish` (私有 npm 发布)
+- [ ] 实现插件测试框架 - `sker plugin test` 命令
+- [ ] 生成 shell 自动完成脚本 - bash/zsh/fish
+- [ ] 实现文档生成工具 - 基于 TypeScript 类型生成文档
+
+### 🔄 Phase 4 替代选项: 高级中间件系统 (Week 5-6) - **ALTERNATIVE**
+
+#### A.1 企业级中间件系统
 - [ ] 实现 `LoggingMiddleware` - 请求/响应日志记录
 - [ ] 实现 `ValidationMiddleware` - 自动参数验证  
 - [ ] 实现 `CacheMiddleware` - 智能结果缓存
@@ -196,7 +289,7 @@
 - [ ] 实现 `PerformanceMiddleware` - 性能监控和指标收集
 - [ ] 实现 `ErrorHandlingMiddleware` - 统一错误处理和恢复
 
-#### 4.2 企业级错误处理系统
+#### A.2 企业级错误处理系统
 - [ ] 实现 `DefaultErrorHandler` - 通用错误处理器
 - [ ] 实现 `ValidationErrorHandler` - 参数验证错误处理
 - [ ] 实现 `BusinessErrorHandler` - 业务逻辑错误处理  
@@ -204,7 +297,7 @@
 - [ ] 集成日志记录 - 结构化错误日志
 - [ ] 实现 MCP 错误格式 - 符合协议的错误响应
 
-#### 4.3 服务管理器和元数据收集器改进
+#### A.3 服务管理器和元数据收集器改进
 - [ ] 服务管理器集成配置系统 - 使用新配置管理
 - [ ] 实现服务实例预绑定注册 - 集成 Feature Injector
 - [ ] 元数据收集器增强 - 支持预绑定功能
@@ -254,9 +347,11 @@
 ### 🟠 HIGH (重要且紧急) - **NEXT FOCUS**
 1. ✅ ~~**Winston 分层日志系统**~~ - 企业级需求 **DONE**
 2. ✅ ~~**配置管理系统**~~ - 系统配置基础 **DONE**
-3. **高级中间件系统** - 功能增强 🎯 **CURRENT PRIORITY**
-4. **服务管理器改进** - 核心服务管理 🎯 **NEXT UP**
-5. **元数据收集器增强** - 支持预绑定
+3. ✅ ~~**HTTP 传输协议**~~ - 现代化通信协议 **DONE**
+4. **CLI 体验优化** - 开发者体验提升 🎯 **CURRENT PRIORITY**
+5. **基于 npm 的插件管理** - 利用成熟生态 🎯 **SIMPLIFIED**
+6. **高级中间件系统** - 功能增强 (替代选项)
+7. **服务管理器改进** - 核心服务管理
 
 ### 🟡 MEDIUM (重要但不紧急)  
 1. **企业级错误处理** - 稳定性保障
@@ -308,17 +403,64 @@
 
 **成果**: +4,799 行代码，8个核心文件，50+ 测试用例，企业级配置管理基础设施
 
-### 🎯 Milestone 4: 高级功能完善 (Week 4-5) - **NEXT**
-- [ ] 高级中间件集合 (Logging/Validation/Cache/Auth)
+### ✅ Milestone 3.5: HTTP 传输协议 (Week 4) - **COMPLETED** 🚀  
+**完成日期**: 2025-01-06  
+**实现内容**:
+- ✅ **MCP Streamable HTTP 传输**: 基于 Express.js 的完整 HTTP 传输实现
+- ✅ **双模式支持**: SSE 流式传输和 JSON 响应模式
+- ✅ **会话管理**: 有状态/无状态会话支持，UUID 会话标识
+- ✅ **安全功能**: CORS 支持、DNS 重绑定保护、请求超时控制
+- ✅ **开发者体验**: 健康检查端点、请求追踪、详细错误处理
+- ✅ **配置集成**: 完整的 HTTP 传输配置验证和管理
+- ✅ **测试覆盖**: 22个测试用例，包含单元测试和集成测试
+- ✅ **文档完善**: 完整的使用指南、客户端示例、故障排除
+
+**成果**: +1,453 行代码，3个新文件，企业级 HTTP 传输基础设施
+
+### 🎯 Milestone 4: CLI 体验优化 (Week 5-6) - **CURRENT PRIORITY** 💻
+**目标**: 实现现代化 CLI 工具，提供卓越的开发者体验和包管理功能  
+**预估工期**: 2 weeks
+
+#### 4.1 现代化 CLI 框架 (Priority: CRITICAL)
+- [ ] **CLI 架构重构**: 替换基础参数解析为现代化 CLI 框架
+- [ ] **命令系统**: 实现子命令架构 (start/plugin/init/config/dev/diagnostic)
+- [ ] **参数验证**: Zod schema 验证命令行参数和选项
+- [ ] **彩色输出**: chalk 集成，美观的命令行界面
+- [ ] **进度指示器**: 操作进度条和状态显示
+
+#### 4.2 包管理和插件分发系统 (Priority: HIGH)
+- [ ] **插件包管理器**: 完整的插件安装/卸载/更新系统
+- [ ] **插件模板生成**: `sker plugin create` 命令和脚手架
+- [ ] **插件打包工具**: 标准化插件打包和分发格式
+- [ ] **版本管理**: 插件版本控制和依赖解析
+- [ ] **插件注册表**: 本地和远程插件注册表支持
+- [ ] **插件市场**: 插件发现和搜索功能
+
+#### 4.3 交互式开发工具 (Priority: HIGH)  
+- [ ] **项目初始化向导**: `sker init` 交互式项目创建
+- [ ] **配置管理 CLI**: `sker config` 可视化配置管理
+- [ ] **开发模式**: `sker dev` 热重载开发服务器
+- [ ] **调试工具**: 实时日志查看、性能监控、插件状态
+- [ ] **健康检查**: 系统诊断和故障排除工具
+
+#### 4.4 自动化和集成功能 (Priority: MEDIUM)
+- [ ] **自动完成**: bash/zsh/fish shell 补全脚本
+- [ ] **文档生成**: 插件文档自动生成
+- [ ] **测试框架**: 插件测试工具和断言库
+- [ ] **构建系统**: 插件构建和优化流程
+- [ ] **部署工具**: 生产环境部署辅助
+
+### 🔄 Milestone 4 替代选项: 高级功能完善 (Week 5-6) - **ALTERNATIVE**
+- [ ] 高级中间件集合 (Logging/Validation/Cache/Auth)  
 - [ ] 企业级错误处理 (重试/熔断/降级)
 - [ ] 服务管理器改进 (预绑定集成、动态注册)
 
-### Milestone 5: 系统集成优化 (Week 5-6)
+### Milestone 5: 系统集成优化 (Week 6-7)
 - [ ] 性能优化和监控工具
 - [ ] 开发体验改善 (热重载/调试)
 - [ ] 集成测试覆盖和质量保障
 
-### Milestone 6: 发布准备 (Week 6-7)
+### Milestone 6: 发布准备 (Week 7-8)
 - [ ] 文档完善更新
 - [ ] 示例和模板
 - [ ] 发布准备就绪
@@ -345,6 +487,173 @@
 - 合理使用缓存减少重复计算
 - 监控内存使用，防止内存泄漏
 
+## 🏗️ CLI 体验优化架构设计
+
+### CLI 应用架构
+```
+src/cli/
+├── cli-application.ts     # 主 CLI 应用类
+├── commands/              # 子命令实现
+│   ├── start.ts          # sker start - 启动服务器
+│   ├── init.ts           # sker init - TypeScript 项目初始化
+│   ├── auth/             # sker auth - 私有仓库认证
+│   │   ├── login.ts      # 登录私有 npm 仓库
+│   │   ├── logout.ts     # 登出
+│   │   ├── whoami.ts     # 用户信息
+│   │   └── status.ts     # 认证状态
+│   ├── plugin/           # sker plugin - TypeScript 插件管理
+│   │   ├── install.ts    # 私有仓库插件安装
+│   │   ├── uninstall.ts  # 插件卸载
+│   │   ├── update.ts     # 私有仓库插件更新
+│   │   ├── list.ts       # 插件列表
+│   │   ├── search.ts     # 私有仓库搜索
+│   │   ├── create.ts     # TypeScript 插件创建
+│   │   ├── build.ts      # TypeScript 插件构建
+│   │   ├── test.ts       # 插件测试
+│   │   └── publish.ts    # 私有仓库插件发布
+│   ├── config/           # sker config - 配置管理
+│   │   ├── get.ts        # 获取配置
+│   │   ├── set.ts        # 设置配置
+│   │   └── wizard.ts     # 配置向导
+│   ├── dev.ts            # sker dev - 开发模式
+│   ├── diagnostic.ts     # sker diagnostic - 系统诊断
+│   ├── logs.ts           # sker logs - 日志查看
+│   └── deploy.ts         # sker deploy - 部署工具
+├── utils/                # CLI 工具
+│   ├── output.ts         # 彩色输出和格式化
+│   ├── progress.ts       # 进度条和加载器
+│   ├── prompt.ts         # 交互式提示
+│   ├── validation.ts     # 参数验证
+│   └── npm-wrapper.ts    # npm 命令包装器
+├── templates/            # TypeScript 项目和插件模板
+│   ├── project/          # TypeScript 项目模板
+│   │   ├── basic/        # 基础项目模板
+│   │   ├── advanced/     # 高级项目模板
+│   │   └── enterprise/   # 企业级项目模板
+│   ├── plugin/           # TypeScript 插件模板
+│   │   ├── basic/        # 基础插件模板 
+│   │   ├── tool/         # 工具插件模板
+│   │   ├── resource/     # 资源插件模板
+│   │   └── middleware/   # 中间件插件模板
+│   └── config/           # 配置模板
+└── completions/          # shell 自动完成
+    ├── bash-completion
+    ├── zsh-completion
+    └── fish-completion
+```
+
+### 基于 npm 的包管理系统设计
+
+**🎯 设计决策**: 使用 npm 作为插件包管理器，而不是自建包管理系统
+
+**✅ npm 方案优势**:
+- **生态成熟**: 利用 npm 强大的包管理生态
+- **依赖解析**: npm 自动处理复杂的依赖关系和版本冲突
+- **发布流程**: 开发者熟悉的 `npm publish` 发布流程
+- **搜索发现**: 利用 npm 的搜索和发现机制
+- **安全扫描**: npm audit 自动安全漏洞检测
+- **缓存优化**: npm 的缓存机制提升安装速度
+- **开发简化**: 无需维护自定义包注册表
+
+**🏗️ 插件命名规范**: 使用 `@sker-plugins/` scope 统一管理
+```typescript
+// 标准 npm package.json 结构，添加 sker 扩展
+interface SkerPluginPackage {
+  name: string;                    // npm 包名: @sker-plugins/plugin-name
+  version: string;                 // semver 版本
+  description: string;
+  main: string;
+  keywords: string[];              // 包含 "sker", "mcp", "plugin"
+  sker: {
+    compatibility: string;         // Sker MCP 版本兼容性: "^1.0.0"
+    type: 'plugin' | 'theme' | 'template';
+    category: string[];            // ["utility", "development", "ai", ...]
+    entry?: string;                // 插件入口文件 (默认使用 main)
+    config?: Record<string, any>;  // 默认配置
+  };
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+}
+
+// 私有 npm 仓库认证管理
+interface AuthManager {
+  login(registry: string, username?: string, password?: string): Promise<void>;
+  logout(registry?: string): Promise<void>;
+  whoami(registry?: string): Promise<string>;
+  getAuthStatus(registry?: string): Promise<{authenticated: boolean, user?: string}>;
+  configureRegistry(registry: string): Promise<void>;
+}
+
+// 私有 npm 命令包装器
+interface PrivateNpmWrapper {
+  install(packageName: string, version?: string, registry?: string): Promise<void>;
+  uninstall(packageName: string): Promise<void>;
+  update(packageName?: string): Promise<void>;
+  search(query: string, options?: {registry?: string, scope?: string}): Promise<SkerPluginPackage[]>;
+  list(options?: {depth?: number}): Promise<Record<string, any>>;
+  outdated(): Promise<Record<string, any>>;
+  publish(packagePath: string, registry?: string): Promise<void>;
+  buildTypescript(projectPath: string): Promise<void>;
+}
+
+// TypeScript 插件管理器
+interface TypeScriptPluginManager {
+  installPlugin(name: string, version?: string): Promise<void>;
+  uninstallPlugin(name: string): Promise<void>;  
+  updatePlugin(name?: string): Promise<void>;
+  buildPlugin(pluginPath: string): Promise<void>;
+  testPlugin(pluginPath: string): Promise<void>;
+  publishPlugin(pluginPath: string): Promise<void>;
+  createPlugin(name: string, template: string): Promise<string>;
+  listInstalledPlugins(): Promise<SkerPluginPackage[]>;
+  searchPlugins(query: string): Promise<SkerPluginPackage[]>;
+  validatePlugin(packagePath: string): Promise<boolean>;
+}
+```
+
+### CLI 命令规范
+```bash
+# 基础命令
+sker [options]                    # 启动服务器 (默认)
+sker start [options]              # 显式启动服务器
+sker --version                    # 版本信息
+sker --help                       # 帮助信息
+
+# 认证管理
+sker auth login                   # 登录私有 npm 仓库
+sker auth logout                  # 登出私有 npm 仓库
+sker auth whoami                  # 显示当前用户信息
+sker auth status                  # 显示认证状态
+
+# 项目管理
+sker init [project-name]          # 初始化 TypeScript 项目
+sker config get <key>             # 获取配置
+sker config set <key> <value>     # 设置配置
+sker config wizard                # 配置向导
+
+# 插件管理 (私有 npm + TypeScript)
+sker plugin list                  # 列出已安装插件
+sker plugin install <name>        # 从私有仓库安装插件
+sker plugin uninstall <name>      # 卸载插件
+sker plugin update [name]         # 从私有仓库更新插件
+sker plugin search <query>        # 在私有仓库搜索插件
+sker plugin create <name>         # 创建 TypeScript 插件模板
+sker plugin build [name]          # 构建 TypeScript 插件
+sker plugin test [name]           # 测试插件
+sker plugin publish               # 发布插件到私有仓库
+sker plugin outdated              # 检查过时插件
+
+# 开发工具
+sker dev                          # 开发模式
+sker logs [--follow] [--level]    # 查看日志
+sker diagnostic                   # 系统诊断
+sker test [plugin-name]           # 运行测试
+
+# 构建和部署
+sker build [--optimize]           # 构建项目
+sker deploy [target]              # 部署到目标环境
+```
+
 ## 🔗 相关文档
 
 - [核心架构设计](./docs/core-architecture.md)
@@ -353,6 +662,7 @@
 - [错误处理系统](./docs/error-handling.md)
 - [日志系统架构](./docs/logging-system.md)
 - [中间件系统](./docs/middleware-system.md)
+- [HTTP 传输协议](./docs/http-transport.md)
 - [模块导入规范](./docs/module-imports.md)
 
 ---

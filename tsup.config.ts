@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   // 入口文件
-  entry: ['src/index.ts', 'src/main.ts'],
+  entry: ['src/index.ts', 'src/main.ts', 'src/cli.ts'],
   
   // 输出格式
   format: ['cjs', 'esm'],

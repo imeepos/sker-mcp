@@ -46,6 +46,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@sker/di": "^1.0.7",
+    "chokidar": "^3.5.3",
     "express": "^5.1.0",
     "reflect-metadata": "^0.2.2",
     "winston": "^3.17.0",

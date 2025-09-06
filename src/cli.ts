@@ -10,6 +10,7 @@
 import { createPlatformInjector, createRootInjector } from '@sker/di';
 import { AppBootstrap } from './common/app-bootstrap.js';
 import { ProjectManager } from './core/project-manager.js';
+import { HotReloadManager } from './dev/hot-reload-manager.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { Logger } from 'winston';
@@ -90,6 +91,14 @@ class SkerCli {
       description: '配置管理命令',
       args: ['action', 'key?', 'value?'],
       handler: this.handleConfig.bind(this)
+    });
+
+    // 开发命令
+    this.addCommand({
+      name: 'dev',
+      description: '开发模式命令',
+      args: ['action?'],
+      handler: this.handleDev.bind(this)
     });
 
     // 版本命令
@@ -450,6 +459,171 @@ class SkerCli {
   }
 
   /**
+   * 处理开发命令
+   */
+  private async handleDev(args: string[], options: Record<string, any>): Promise<void> {
+    const action = args[0];
+
+    switch (action) {
+      case undefined:
+      case 'start':
+        await this.startDevMode(options);
+        break;
+      case 'status':
+        await this.showDevStatus(options);
+        break;
+      case 'reload':
+        const pluginName = args[1];
+        if (!pluginName) {
+          console.error('❌ reload 命令需要插件名称');
+          console.log('用法: sker dev reload <插件名称>');
+          process.exit(1);
+        }
+        await this.reloadPlugin(pluginName, options);
+        break;
+      default:
+        console.log('🔥 开发模式命令:');
+        console.log('   start             启动开发模式 (默认)');
+        console.log('   status            显示开发模式状态');
+        console.log('   reload <插件>      手动重载指定插件');
+        break;
+    }
+  }
+
+  /**
+   * 启动开发模式
+   */
+  private async startDevMode(options: Record<string, any>): Promise<void> {
+    console.log('🔥 启动插件开发模式...\n');
+
+    try {
+      // 创建应用程序注入器和热重载管理器
+      const injector = this.bootstrap.createInjector();
+      const hotReloadManager = injector.get(HotReloadManager);
+
+      // 设置事件监听器
+      hotReloadManager.onEvent((data) => {
+        switch (data.event) {
+          case 'watch_started':
+            console.log('✅ 开发模式已启动');
+            break;
+          case 'reload_started':
+            console.log(`🔄 正在重载插件: ${data.pluginName}`);
+            break;
+          case 'reload_success':
+            console.log(`✅ 插件重载成功: ${data.pluginName} (${data.duration}ms)`);
+            break;
+          case 'reload_failed':
+            console.log(`❌ 插件重载失败: ${data.pluginName} - ${data.error}`);
+            break;
+        }
+      });
+
+      // 启动热重载
+      await hotReloadManager.startDevMode();
+
+      const status = hotReloadManager.getDevModeStatus();
+      console.log(`📁 监控 ${status.watchingPlugins} 个开发插件`);
+      
+      if (status.watchingPlugins > 0) {
+        console.log('\n📋 监控的插件:');
+        const watchingPlugins = hotReloadManager.getWatchingPlugins();
+        for (const plugin of watchingPlugins) {
+          console.log(`   • ${plugin.pluginName} - ${plugin.mainFile}`);
+        }
+      }
+
+      console.log('\n🚀 开发模式运行中... 修改插件文件将自动重载');
+      console.log('按 Ctrl+C 退出开发模式');
+
+      // 设置优雅关闭
+      process.on('SIGINT', async () => {
+        console.log('\n🔄 正在停止开发模式...');
+        await hotReloadManager.stopDevMode();
+        console.log('👋 开发模式已停止');
+        process.exit(0);
+      });
+
+      // 保持运行
+      process.stdin.resume();
+
+    } catch (error) {
+      console.error('❌ 启动开发模式失败:', (error as Error).message);
+      if (options.debug) {
+        console.error((error as Error).stack);
+      }
+      process.exit(1);
+    }
+  }
+
+  /**
+   * 显示开发模式状态
+   */
+  private async showDevStatus(options: Record<string, any>): Promise<void> {
+    try {
+      const injector = this.bootstrap.createInjector();
+      const hotReloadManager = injector.get(HotReloadManager);
+      
+      const status = hotReloadManager.getDevModeStatus();
+      
+      console.log('🔥 开发模式状态\n');
+      
+      console.log(`状态: ${status.isActive ? '✅ 运行中' : '❌ 未运行'}`);
+      console.log(`监控插件: ${status.watchingPlugins}`);
+      console.log(`总重载次数: ${status.totalReloads}`);
+      console.log(`成功重载: ${status.successfulReloads}`);
+      console.log(`失败重载: ${status.failedReloads}`);
+      console.log(`平均重载时间: ${status.averageReloadTime.toFixed(1)}ms`);
+      console.log(`运行时间: ${Math.floor(status.uptime / 1000)}秒`);
+
+      if (status.watchingPlugins > 0) {
+        console.log('\n📋 监控的插件:');
+        const watchingPlugins = hotReloadManager.getWatchingPlugins();
+        for (const plugin of watchingPlugins) {
+          console.log(`   • ${plugin.pluginName}`);
+          console.log(`     路径: ${plugin.pluginPath}`);
+          console.log(`     主文件: ${plugin.mainFile}`);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ 获取开发模式状态失败:', (error as Error).message);
+      if (options.debug) {
+        console.error((error as Error).stack);
+      }
+      process.exit(1);
+    }
+  }
+
+  /**
+   * 手动重载插件
+   */
+  private async reloadPlugin(pluginName: string, options: Record<string, any>): Promise<void> {
+    try {
+      console.log(`🔄 手动重载插件: ${pluginName}`);
+
+      const injector = this.bootstrap.createInjector();
+      const hotReloadManager = injector.get(HotReloadManager);
+
+      const success = await hotReloadManager.reloadPlugin(pluginName);
+
+      if (success) {
+        console.log(`✅ 插件 ${pluginName} 重载成功`);
+      } else {
+        console.log(`❌ 插件 ${pluginName} 重载失败`);
+        process.exit(1);
+      }
+
+    } catch (error) {
+      console.error(`❌ 重载插件失败: ${(error as Error).message}`);
+      if (options.debug) {
+        console.error((error as Error).stack);
+      }
+      process.exit(1);
+    }
+  }
+
+  /**
    * 处理版本命令
    */
   private async handleVersion(_args: string[], options: Record<string, any>): Promise<void> {
@@ -497,6 +671,7 @@ Sker Daemon MCP 服务器 CLI
   init                  初始化项目目录结构
   plugin <动作>         插件管理 (list, info <名称>)
   config <动作>         配置管理 (show)
+  dev [动作]            开发模式 (start, status, reload <插件>)
   version, v            显示版本信息
   help                  显示此帮助信息
 
@@ -513,6 +688,9 @@ Sker Daemon MCP 服务器 CLI
   sker plugin list
   sker plugin info my-plugin
   sker config show
+  sker dev                      # 启动开发模式
+  sker dev status               # 查看开发模式状态
+  sker dev reload my-plugin     # 手动重载插件
   sker version
 
 环境变量:

@@ -40,6 +40,9 @@ import { FeatureInjector } from './plugins/feature-injector.js';
 import { PluginConflictDetector } from './plugins/conflict-detector.js';
 import { EnvironmentConfigProcessor } from './config/environment-config.js';
 import { ConfigurationSystem } from './config/index.js';
+import { HotReloadManager } from '../dev/hot-reload-manager.js';
+import { FileWatcher } from '../dev/file-watcher.js';
+import { PluginManager } from './plugin-manager.js';
 
 /**
  * Default MCP server configuration
@@ -136,7 +139,10 @@ export function createPlatformProviders(): Provider[] {
     ...createPluginSystemProviders(),
     
     // Configuration system providers
-    ...createConfigurationProviders()
+    ...createConfigurationProviders(),
+    
+    // Development system providers
+    ...createDevelopmentProviders()
   ];
 }
 
@@ -192,6 +198,31 @@ function createPluginSystemProviders(): Provider[] {
           allowPrivilegeEscalation: false
         }
       }
+    }
+  ];
+}
+
+/**
+ * Create development system providers
+ */
+function createDevelopmentProviders(): Provider[] {
+  return [
+    // File Watcher provider
+    {
+      provide: FileWatcher,
+      useFactory: (logger: any) => {
+        return new FileWatcher(logger);
+      },
+      deps: [LOGGER]
+    },
+    
+    // Hot Reload Manager provider
+    {
+      provide: HotReloadManager,
+      useFactory: (logger: any, pluginManager: PluginManager, projectManager: ProjectManager) => {
+        return new HotReloadManager(logger, pluginManager, projectManager);
+      },
+      deps: [LOGGER, PluginManager, ProjectManager]
     }
   ];
 }
