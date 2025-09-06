@@ -18,7 +18,7 @@ export interface Logger {
 /**
  * Simple console logger implementation
  */
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class ConsoleLogger implements Logger {
   private readonly logLevel: string;
   private readonly levels = {

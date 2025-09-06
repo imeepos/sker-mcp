@@ -102,7 +102,6 @@ export interface ErrorHandlerOptions {
  *     description: 'Operation with inline error handling'
  *   })
  *   @ErrorHandler((error, context) => {
- *     console.log('Custom error handler:', error.message);
  *     return { error: true, message: 'Custom handled error' };
  *   })
  *   async customErrorHandling(request: CallToolRequest) {
