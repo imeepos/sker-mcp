@@ -91,8 +91,8 @@ export class ConfigurationSystem {
   private _pluginConfigManager: PluginConfigManager;
   private _initialized = false;
   
-  constructor(projectManager: ProjectManager, logger: IWinstonLogger) {
-    this._configManager = new ConfigManager(projectManager, logger);
+  constructor(logger: IWinstonLogger) {
+    this._configManager = new ConfigManager(logger);
     this._pluginConfigManager = new PluginConfigManager(this._configManager);
   }
   
@@ -104,7 +104,7 @@ export class ConfigurationSystem {
       if (!projectManager || !logger) {
         throw new Error('ConfigurationSystem requires ProjectManager and Logger dependencies on first initialization');
       }
-      ConfigurationSystem.instance = new ConfigurationSystem(projectManager, logger);
+      ConfigurationSystem.instance = new ConfigurationSystem(logger);
     }
     return ConfigurationSystem.instance;
   }

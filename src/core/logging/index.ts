@@ -35,10 +35,6 @@ export {
   ensureLogDirectories
 } from './logging-config.js';
 
-export {
-  ConsoleLogger
-} from '../console-logger.js';
-
 // Re-export types
 export type {
   WinstonLoggerConfig,
