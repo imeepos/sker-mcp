@@ -383,7 +383,114 @@ ${code}
 
 ### @Input - 输入参数装饰器
 
-用于标记和验证方法参数，支持自动 schema 构建。
+用于标记和验证方法参数，支持自动 schema 构建和智能参数映射。
+
+#### 核心特性
+
+- **智能参数映射**: 自动将 MCP 客户端的对象参数映射到方法的具体参数位置
+- **双重模式兼容**: 支持新版 @Input 装饰器模式和旧版对象参数模式
+- **类型安全**: 编译时类型检查和运行时验证
+- **自动 Schema 构建**: 从装饰器自动生成 MCP 工具的输入架构
+
+#### 使用方式
+
+##### 1. 简化形式（直接传入 Zod schema）
+
+```typescript
+class UserService {
+  @McpTool({ name: 'create-user', description: '创建新用户' })
+  async createUser(
+    @Input(z.string().min(1).describe('用户名')) username: string,
+    @Input(z.string().email().describe('邮箱地址')) email: string,
+    @Input(z.number().min(18).describe('年龄')) age: number,
+    @Input(z.boolean().optional().describe('是否激活')) isActive?: boolean
+  ) {
+    // 参数会自动映射：username, email, age, isActive
+    return { content: [{ type: 'text', text: `创建用户: ${username}` }] };
+  }
+}
+```
+
+##### 2. 完整配置形式
+
+```typescript
+class AdvancedUserService {
+  @McpTool({ name: 'update-profile', description: '更新用户资料' })
+  async updateProfile(
+    @Input({
+      name: 'userId',                      // 自定义参数名
+      schema: z.string().uuid(),           // Zod 验证规则
+      description: '用户唯一标识符',         // 参数描述
+      required: true                       // 是否必填
+    }) id: string,
+    
+    @Input({
+      name: 'profileData',
+      schema: z.object({
+        displayName: z.string().optional(),
+        avatar: z.string().url().optional(),
+        bio: z.string().max(500).optional()
+      }),
+      description: '用户资料数据',
+      required: false
+    }) profile?: any
+  ) {
+    // 参数自动映射：id = arguments.userId, profile = arguments.profileData
+    return { content: [{ type: 'text', text: `更新用户 ${id} 的资料` }] };
+  }
+}
+```
+
+#### 参数映射原理
+
+系统会根据 @Input 装饰器的元数据，自动将 MCP 客户端传入的对象参数映射到方法参数：
+
+```typescript
+// 客户端调用：
+{
+  "method": "tools/call",
+  "params": {
+    "name": "update-profile",
+    "arguments": {
+      "userId": "123e4567-e89b-12d3-a456-426614174000",
+      "profileData": {
+        "displayName": "张三",
+        "avatar": "https://example.com/avatar.jpg"
+      }
+    }
+  }
+}
+
+// 系统自动映射为方法调用：
+updateProfile(
+  "123e4567-e89b-12d3-a456-426614174000",  // id 参数
+  {                                         // profile 参数
+    displayName: "张三",
+    avatar: "https://example.com/avatar.jpg"
+  }
+)
+```
+
+#### 向后兼容性
+
+对于不使用 @Input 装饰器的传统方法，系统会自动回退到对象参数模式：
+
+```typescript
+class LegacyService {
+  @McpTool({ 
+    name: 'legacy-operation',
+    description: '传统操作方式',
+    inputSchema: {
+      input: z.string(),
+      count: z.number()
+    }
+  })
+  async legacyOperation(args: { input: string; count: number }) {
+    // 传统模式：直接接收完整的参数对象
+    return { content: [{ type: 'text', text: `处理: ${args.input}` }] };
+  }
+}
+```
 
 ```typescript
 import { McpTool, Input } from '@sker/mcp';

@@ -144,6 +144,16 @@ export class MetadataCollector implements IMetadataCollector {
   static createBoundTool(metadata: ToolMetadata, serviceInstance: any, injector: Injector): IMcpTool;
   static createBoundResource(metadata: ResourceMetadata, serviceInstance: any, injector: Injector): IMcpResource;
   static createBoundPrompt(metadata: PromptMetadata, serviceInstance: any, injector: Injector): IMcpPrompt;
+  
+  // 执行中间件链
+  static executeWithMiddleware(
+    boundService: any, 
+    type: 'tool' | 'prompt', 
+    request: any, 
+    next: Function, 
+    metadata: any, 
+    injector: Injector
+  ): Promise<any>;
 }
 ```
 
@@ -151,7 +161,10 @@ export class MetadataCollector implements IMetadataCollector {
 - 收集功能服务类的装饰器元数据
 - 生成对应的 providers 配置
 - **创建预绑定服务实例的功能对象**（核心特性）
+- **支持 @Input 装饰器的参数映射** - 自动将对象参数映射到方法参数
+- **智能参数处理** - 支持新版 @Input 装饰器和旧版参数传递的兼容
 - 支持插件动态加载时的服务实例绑定
+- 处理中间件链执行
 
 #### ProjectManager (项目管理器)
 
@@ -206,12 +219,32 @@ export function Tool(options: ToolOptions = {}) {
 ##### @Input 装饰器
 
 ```typescript
-export function Input(schema: ZodType<any>) {
+export function Input(options: InputOptions | ZodType<any>) {
   return function (target: any, propertyKey: string, parameterIndex: number) {
-    const existingSchemas = Reflect.getMetadata('param:schemas', target, propertyKey) || [];
-    existingSchemas[parameterIndex] = schema;
-    Reflect.defineMetadata('param:schemas', existingSchemas, target, propertyKey);
+    // 处理两种调用方式
+    const inputOptions: InputOptions = options instanceof ZodType 
+      ? { schema: options }
+      : options;
+
+    // 存储参数元数据，包含索引信息用于参数映射
+    const parameterSchemas = Reflect.getMetadata('mcp:tool:params', target, propertyKey) || [];
+    parameterSchemas[parameterIndex] = {
+      name: inputOptions.name || inferParameterName(target, propertyKey, parameterIndex),
+      schema: inputOptions.schema,
+      description: inputOptions.description,
+      required: inputOptions.required,
+      index: parameterIndex
+    };
+    
+    Reflect.defineMetadata('mcp:tool:params', parameterSchemas, target, propertyKey);
   };
+}
+
+export interface InputOptions {
+  name?: string;                    // 参数名称
+  schema: ZodType<any>;            // Zod 验证 schema
+  description?: string;            // 参数描述
+  required?: boolean;              // 是否必填
 }
 ```
 
@@ -219,7 +252,33 @@ export function Input(schema: ZodType<any>) {
 - **类型安全**: 编译时检查，IDE 智能提示
 - **代码简洁**: 声明式参数定义
 - **自动验证**: 运行时自动参数验证
+- **智能参数映射**: 自动将对象参数映射到方法参数位置
+- **向后兼容**: 支持新版 @Input 装饰器和旧版参数传递
 - **类型一致**: TypeScript 类型与验证规则同步
+
+**参数映射机制**:
+```typescript
+// MetadataCollector 中的参数映射逻辑
+const parameterSchemas = Reflect.getMetadata('mcp:tool:params', serviceInstance, metadata.methodName);
+
+if (parameterSchemas && parameterSchemas.length > 0) {
+  // 新版 @Input 装饰器: 映射对象参数到方法参数
+  methodArgs = [];
+  const args = request.params.arguments || {};
+  
+  for (const paramSchema of parameterSchemas) {
+    if (paramSchema && paramSchema.name) {
+      methodArgs[paramSchema.index] = args[paramSchema.name];
+    }
+  }
+} else {
+  // 旧版模式: 直接传递整个参数对象
+  methodArgs = [request.params.arguments];
+}
+
+// 调用方法时使用 apply 而不是 call
+return await method.apply(serviceInstance, methodArgs);
+```
 
 ##### @ErrorHandler 装饰器
 

@@ -80,7 +80,7 @@ export default plugin;
 
 ## 开发工具 (Tools)
 
-### 工具示例
+### 基础工具示例
 
 ```typescript
 class CalculatorService {
@@ -95,6 +95,103 @@ class CalculatorService {
   ) {
     const result = operation === 'add' ? a + b : a - b;
     return { content: [{ type: 'text', text: `结果: ${result}` }] };
+  }
+}
+```
+
+### @Input 装饰器详解
+
+`@Input` 装饰器支持两种使用方式：
+
+#### 1. 简化形式（直接传入 Zod schema）
+
+```typescript
+class SimpleService {
+  @Tool({ name: 'simple-tool', description: '简单工具' })
+  async simpleTool(
+    @Input(z.string().describe('用户名')) username: string,
+    @Input(z.number().min(0).describe('年龄')) age: number,
+    @Input(z.boolean().optional()) isActive?: boolean
+  ) {
+    return {
+      content: [{
+        type: 'text',
+        text: `用户: ${username}, 年龄: ${age}, 状态: ${isActive ? '活跃' : '非活跃'}`
+      }]
+    };
+  }
+}
+```
+
+#### 2. 完整配置形式
+
+```typescript
+class AdvancedService {
+  @Tool({ name: 'advanced-tool', description: '高级工具' })
+  async advancedTool(
+    @Input({
+      name: 'userEmail',                    // 自定义参数名
+      schema: z.string().email(),           // Zod 验证规则
+      description: '用户邮箱地址',           // 参数描述
+      required: true                        // 是否必填
+    }) email: string,
+    
+    @Input({
+      name: 'preferences',
+      schema: z.object({
+        theme: z.enum(['light', 'dark']),
+        language: z.string().default('zh-CN')
+      }),
+      description: '用户偏好设置',
+      required: false
+    }) prefs?: any
+  ) {
+    return {
+      content: [{
+        type: 'text',
+        text: `邮箱: ${email}, 主题: ${prefs?.theme || 'default'}`
+      }]
+    };
+  }
+}
+```
+
+### 参数映射机制
+
+系统会自动将 MCP 客户端传入的对象参数映射到方法的具体参数：
+
+```typescript
+// 客户端调用：
+// {
+//   "method": "tools/call",
+//   "params": {
+//     "name": "advanced-tool",
+//     "arguments": {
+//       "userEmail": "user@example.com",
+//       "preferences": {
+//         "theme": "dark",
+//         "language": "en-US"
+//       }
+//     }
+//   }
+// }
+
+// 系统自动映射为：
+// advancedTool("user@example.com", { theme: "dark", language: "en-US" })
+```
+
+### 向后兼容性
+
+对于不使用 `@Input` 装饰器的旧版工具，系统会自动回退到传统模式：
+
+```typescript
+class LegacyService {
+  @Tool({ name: 'legacy-tool', description: '旧版工具' })
+  async legacyTool(args: { input: string; count: number }) {
+    // 旧版模式：直接接收完整的参数对象
+    return {
+      content: [{ type: 'text', text: `处理: ${args.input}, 次数: ${args.count}` }]
+    };
   }
 }
 ```
