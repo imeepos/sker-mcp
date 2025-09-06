@@ -30,7 +30,7 @@ interface ILogger {
 /**
  * Middleware executor implementing the onion model
  */
-@Injectable()
+@Injectable({providedIn: 'platform'})
 export class MiddlewareExecutor {
   private readonly middlewareRegistry = new Map<string, MiddlewareRegistryEntry>();
   private readonly options: MiddlewareOptions = {};

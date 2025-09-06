@@ -7,8 +7,8 @@
  */
 
 import { Injectable, Inject } from '@sker/di';
-import { LOGGER_CONFIG, PROJECT_MANAGER } from '../tokens.js';
-import type { ProjectManager } from '../project-manager.js';
+import { LOGGER_CONFIG } from '../tokens.js';
+import { ProjectManager } from '../project-manager.js';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
@@ -136,7 +136,7 @@ export class WinstonLogger implements IWinstonLogger {
   constructor(
     component: string = 'system',
     @Inject(LOGGER_CONFIG) config?: WinstonLoggerConfig,
-    @Inject(PROJECT_MANAGER) private projectManager?: ProjectManager
+    @Inject(ProjectManager) private projectManager?: ProjectManager
   ) {
     this.component = component;
     this.config = config || this.getDefaultConfig();
@@ -226,9 +226,9 @@ export class WinstonLogger implements IWinstonLogger {
 
     // File transport with rotation
     if (this.config.transports?.file?.enabled) {
-      const filename = this.config.transports.file.filename || 
+      const filename = this.config.transports.file.filename ||
         `${logDir}/sker-daemon-%DATE%.log`;
-      
+
       transports.push(new DailyRotateFile({
         filename,
         datePattern: this.config.transports.file.datePattern || 'YYYY-MM-DD',
@@ -299,14 +299,14 @@ export class WinstonLogger implements IWinstonLogger {
 /**
  * Winston Logger Factory
  */
-@Injectable()
+@Injectable({ providedIn: 'platform' })
 export class WinstonLoggerFactory implements ILoggerFactory {
   private loggers = new Map<string, IWinstonLogger>();
   private globalConfig: WinstonLoggerConfig;
 
   constructor(
     @Inject(LOGGER_CONFIG) config: WinstonLoggerConfig,
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager
   ) {
     this.globalConfig = config;
   }
@@ -314,7 +314,7 @@ export class WinstonLoggerFactory implements ILoggerFactory {
   createLogger(component: string, options?: Partial<WinstonLoggerConfig>): IWinstonLogger {
     const config = { ...this.globalConfig, ...options };
     const logger = new WinstonLogger(component, config, this.projectManager);
-    
+
     this.loggers.set(component, logger);
     return logger;
   }
@@ -329,7 +329,7 @@ export class WinstonLoggerFactory implements ILoggerFactory {
 
   configure(config: WinstonLoggerConfig): void {
     this.globalConfig = { ...this.globalConfig, ...config };
-    
+
     // Update existing loggers
     for (const [component, logger] of this.loggers.entries()) {
       if (logger instanceof WinstonLogger) {
@@ -343,7 +343,7 @@ export class WinstonLoggerFactory implements ILoggerFactory {
  * Performance logging utilities
  */
 export class PerformanceLogger {
-  constructor(private logger: IWinstonLogger) {}
+  constructor(private logger: IWinstonLogger) { }
 
   /**
    * Log method execution time
@@ -355,14 +355,14 @@ export class PerformanceLogger {
   ): (...args: any[]) => T {
     return (...args: any[]): T => {
       const endTimer = this.logger.startTimer(`${target.constructor.name}.${methodName}`);
-      
+
       try {
         const result = originalMethod.apply(target, args);
-        
+
         if (result instanceof Promise) {
           return result.finally(() => endTimer()) as T;
         }
-        
+
         endTimer();
         return result;
       } catch (error) {
@@ -386,7 +386,7 @@ export class PerformanceLogger {
   ): Promise<T> {
     const endTimer = this.logger.startTimer(operationName);
     this.logger.debug(`Starting async operation: ${operationName}`, context);
-    
+
     try {
       const result = await operation();
       this.logger.debug(`Completed async operation: ${operationName}`, context);
@@ -407,7 +407,7 @@ export class PerformanceLogger {
  * Structured logging utilities
  */
 export class StructuredLogger {
-  constructor(private logger: IWinstonLogger) {}
+  constructor(private logger: IWinstonLogger) { }
 
   /**
    * Log user action
@@ -456,7 +456,7 @@ export class StructuredLogger {
    */
   logApiRequest(method: string, path: string, statusCode: number, duration: number, details?: Record<string, any>): void {
     const level = statusCode >= 400 ? 'warn' : 'info';
-    
+
     this.logger.log(level, `API ${method} ${path} ${statusCode}`, {
       method,
       path,

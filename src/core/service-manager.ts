@@ -9,7 +9,7 @@
 import { Injectable, Inject } from '@sker/di';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
+import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
@@ -28,11 +28,11 @@ import {
   MCP_PROMPTS,
   LOGGER
 } from '@sker/mcp';
-import type { 
-  IMcpTool, 
-  IMcpResource, 
-  IMcpPrompt, 
-  IMcpServerConfig 
+import type {
+  IMcpTool,
+  IMcpResource,
+  IMcpPrompt,
+  IMcpServerConfig
 } from '@sker/mcp';
 import { ServicePreBindingManager } from './service-prebinding.js';
 import type {
@@ -69,7 +69,7 @@ export interface TransportConfig {
  * This class manages the MCP server instance, handles registration of tools, resources,
  * and prompts, and manages the transport layer for communication with MCP clients.
  */
-@Injectable()
+@Injectable({ providedIn: 'auto' })
 export class ServiceManager {
   private mcpServer: McpServer;
   private transport: StdioServerTransport | null = null;
@@ -108,7 +108,7 @@ export class ServiceManager {
 
     // Initialize service pre-binding manager
     this.preBindingManager = new ServicePreBindingManager(this.logger);
-    
+
     this.setupServerHandlers();
   }
 
@@ -431,7 +431,7 @@ export class ServiceManager {
    */
   private async handleToolCall(tool: IMcpTool, request: CallToolRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling tool call', {
         toolName: tool.name,
@@ -479,7 +479,7 @@ export class ServiceManager {
    */
   private async handleResourceRead(resource: IMcpResource, request: ReadResourceRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling resource read', {
         resourceUri: resource.uri,
@@ -527,7 +527,7 @@ export class ServiceManager {
    */
   private async handlePromptGet(prompt: IMcpPrompt, request: GetPromptRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling prompt get', {
         promptName: prompt.name,
@@ -802,7 +802,7 @@ export class ServiceManager {
    */
   private async handlePreBoundToolCall(tool: any, request: CallToolRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling pre-bound tool call', {
         toolName: tool.name,
@@ -838,7 +838,7 @@ export class ServiceManager {
    */
   private async handlePreBoundResourceRead(resource: any, request: ReadResourceRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling pre-bound resource read', {
         resourceUri: resource.uri,
@@ -874,7 +874,7 @@ export class ServiceManager {
    */
   private async handlePreBoundPromptGet(prompt: any, request: GetPromptRequest): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       this.logger?.debug('Handling pre-bound prompt get', {
         promptName: prompt.name,
@@ -911,7 +911,7 @@ export class ServiceManager {
   private setStatus(status: ServiceManagerStatus): void {
     const previousStatus = this.status;
     this.status = status;
-    
+
     this.logger?.debug('ServiceManager status changed', {
       from: previousStatus,
       to: status

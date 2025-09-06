@@ -35,7 +35,7 @@ interface ILogger {
 /**
  * Error manager for centralized error handling
  */
-@Injectable()
+@Injectable({ providedIn: 'platform' })
 export class ErrorManager {
   private readonly errorHandlers = new Map<string, ErrorHandlerEntry>();
   private readonly recoveryStrategies: ErrorRecoveryStrategy[] = [];
@@ -82,7 +82,7 @@ export class ErrorManager {
    */
   async handleError(error: Error, context: ErrorContext): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       // Log the error if configured to do so
       if (this.config.logErrors !== false) {
@@ -99,13 +99,13 @@ export class ErrorManager {
 
       // Find appropriate error handlers
       const handlers = this.getApplicableHandlers(error, context);
-      
+
       if (handlers.length === 0) {
         // Use default handler if available
         if (this.config.defaultHandler) {
           return await this.executeHandler(this.config.defaultHandler, error, context);
         }
-        
+
         // Fallback to built-in error handling
         return this.buildDefaultErrorResponse(error, context);
       }
@@ -115,17 +115,17 @@ export class ErrorManager {
       if (!handlerEntry || !handlerEntry.handler) {
         throw new Error(`Handler or entry is undefined`);
       }
-      
+
       const result = await this.executeHandler(handlerEntry.handler, error, context);
-      
+
       const executionTime = Date.now() - startTime;
       this.logger.debug(`Error handled by ${handlerEntry.id} in ${executionTime}ms`);
-      
+
       return result;
-      
+
     } catch (handlerError) {
       this.logger.error('Error handler failed:', handlerError);
-      
+
       // Fallback to basic error response
       return this.buildDefaultErrorResponse(error, context);
     }
@@ -147,7 +147,7 @@ export class ErrorManager {
         }
       }
     }
-    
+
     throw error; // No recovery possible
   }
 
@@ -164,7 +164,7 @@ export class ErrorManager {
    */
   configure(config: Partial<ErrorHandlingConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     // Register global handlers if provided
     if (config.globalHandlers) {
       for (let i = 0; i < config.globalHandlers.length; i++) {
@@ -198,13 +198,13 @@ export class ErrorManager {
    */
   private getApplicableHandlers(error: Error, context: ErrorContext): ErrorHandlerEntry[] {
     const handlers: ErrorHandlerEntry[] = [];
-    
+
     for (const entry of this.errorHandlers.values()) {
       if (this.isHandlerApplicable(entry, error, context)) {
         handlers.push(entry);
       }
     }
-    
+
     // Sort by priority (lower numbers first)
     return handlers.sort((a, b) => a.priority - b.priority);
   }
@@ -213,15 +213,15 @@ export class ErrorManager {
    * Check if a handler is applicable for the error and context
    */
   private isHandlerApplicable(
-    entry: ErrorHandlerEntry, 
-    error: Error, 
+    entry: ErrorHandlerEntry,
+    error: Error,
     context: ErrorContext
   ): boolean {
     // For function handlers, always applicable
     if (typeof entry.handler === 'function' && !entry.handler.prototype?.handle) {
       return true;
     }
-    
+
     // For class handlers, check if they have a canHandle method
     try {
       if (typeof entry.handler === 'function' && entry.handler.prototype?.canHandle) {
@@ -231,7 +231,7 @@ export class ErrorManager {
     } catch (err) {
       this.logger.warn(`Failed to check handler applicability for ${entry.id}:`, err);
     }
-    
+
     return true;
   }
 
@@ -254,7 +254,7 @@ export class ErrorManager {
         return await (handler as ErrorHandlerFunction)(error, context);
       }
     }
-    
+
     throw new Error('Invalid error handler type');
   }
 
@@ -276,7 +276,7 @@ export class ErrorManager {
         response.statusCode = error.statusCode;
         response.details = error.details;
       }
-      
+
       response.stack = error.stack;
       response.context = {
         requestType: context.requestType,

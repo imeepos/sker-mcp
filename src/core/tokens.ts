@@ -16,6 +16,7 @@
  */
 
 import { InjectionToken, StringToken, SymbolToken } from '@sker/di';
+import { Logger } from './console-logger';
 
 // === Type Definitions ===
 /**
@@ -119,36 +120,12 @@ export const MCP_PROMPTS = new InjectionToken<McpPromptDefinition[]>('MCP_PROMPT
 });
 
 // === Manager Tokens ===
-/**
- * Token for the main service manager
- */
-export const SERVICE_MANAGER = new InjectionToken<any>('SERVICE_MANAGER');
-
-/**
- * Token for the project directory manager
- */
-export const PROJECT_MANAGER = new InjectionToken<any>('PROJECT_MANAGER');
-
-/**
- * Token for the plugin management system
- */
-export const PLUGIN_MANAGER = new InjectionToken<any>('PLUGIN_MANAGER');
-
-/**
- * Token for the middleware executor
- */
-export const MIDDLEWARE_EXECUTOR = new InjectionToken<any>('MIDDLEWARE_EXECUTOR');
-
-/**
- * Token for the error manager
- */
-export const ERROR_MANAGER = new InjectionToken<any>('ERROR_MANAGER');
 
 // === Logger Tokens ===
 /**
  * Token for the main logger instance
  */
-export const LOGGER = new InjectionToken<any>('LOGGER');
+export const LOGGER = new InjectionToken<Logger>('LOGGER');
 
 /**
  * Token for logger configuration
@@ -164,10 +141,6 @@ export const LOGGER_CONFIG = new InjectionToken<LoggerConfig>('LOGGER_CONFIG', {
   })
 });
 
-/**
- * Token for logger factory
- */
-export const LOGGER_FACTORY = new InjectionToken<any>('LOGGER_FACTORY');
 
 /**
  * Token for layered logger factory

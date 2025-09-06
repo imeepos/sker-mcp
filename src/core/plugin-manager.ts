@@ -7,11 +7,10 @@
  */
 
 import { Injectable, Inject, Injector, Provider, createApplicationInjector } from '@sker/di';
-import { 
-  PROJECT_MANAGER, 
+import {
   LOGGER,
   ProjectManager,
-  type IPlugin, 
+  type IPlugin,
   type IPluginManager,
   PluginStatus
 } from '@sker/mcp';
@@ -43,7 +42,7 @@ import type {
  * dynamic discovery and loading, conflict detection, and service pre-binding.
  * Supports hot reloading, performance monitoring, and enterprise-grade security.
  */
-@Injectable()
+@Injectable({ providedIn: 'auto' })
 export class PluginManager implements IPluginManager {
   private activePlugins: Map<string, IPlugin> = new Map();
   private pluginStatuses: Map<string, PluginStatus> = new Map();
@@ -57,7 +56,7 @@ export class PluginManager implements IPluginManager {
   private isInitialized = false;
 
   constructor(
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager,
     @Inject(LOGGER) private readonly logger: IWinstonLogger,
     private readonly applicationInjector?: Injector
   ) {
@@ -68,7 +67,7 @@ export class PluginManager implements IPluginManager {
     this.pluginDiscovery = new PluginDiscovery(this.projectManager, this.logger);
     this.pluginLoader = new PluginLoader(this.logger, this.projectManager);
     this.conflictDetector = new PluginConflictDetector(this.logger);
-    
+
     this.logger.debug('PluginManager initialized with Feature Injector architecture');
   }
 
@@ -78,10 +77,9 @@ export class PluginManager implements IPluginManager {
   private createFallbackInjector(): Injector {
     // This is a simplified fallback - in practice, you'd want to pass the actual application injector
     const fallbackProviders: Provider[] = [
-      { provide: PROJECT_MANAGER, useValue: this.projectManager },
       { provide: LOGGER, useValue: this.logger }
     ];
-    
+
     return createApplicationInjector(fallbackProviders);
   }
 
@@ -93,12 +91,12 @@ export class PluginManager implements IPluginManager {
    */
   async loadPlugin(pluginName: string): Promise<IPlugin> {
     await this.ensureInitialized();
-    
+
     const startTime = Date.now();
-    
+
     try {
       this.logger.info('Loading plugin with Feature Injector', { pluginName });
-      
+
       // Set status to loading
       this.pluginStatuses.set(pluginName, PluginStatus.LOADING);
 
@@ -160,13 +158,13 @@ export class PluginManager implements IPluginManager {
     } catch (error) {
       this.pluginStatuses.set(pluginName, PluginStatus.FAILED);
       const duration = Date.now() - startTime;
-      
+
       this.logger.error('Failed to load plugin', {
         pluginName,
         error: error instanceof Error ? error.message : String(error),
         duration
       });
-      
+
       throw error;
     }
   }
@@ -188,11 +186,11 @@ export class PluginManager implements IPluginManager {
 
       // Get isolated instance
       const isolatedInstance = this.isolatedInstances.get(pluginName);
-      
+
       if (isolatedInstance) {
         // Destroy isolated instance (handles cleanup and onUnload hooks)
         await isolatedInstance.destroy();
-        
+
         // Remove from Feature Injector
         await this.featureInjector.removeIsolatedPlugin(pluginName, plugin.version);
       } else {
@@ -228,7 +226,7 @@ export class PluginManager implements IPluginManager {
    */
   async reloadPlugin(pluginName: string): Promise<IPlugin> {
     const startTime = Date.now();
-    
+
     this.logger.info('Reloading plugin with hot reload', { pluginName });
 
     try {
@@ -242,14 +240,14 @@ export class PluginManager implements IPluginManager {
 
       // Load again
       const plugin = await this.loadPlugin(pluginName);
-      
+
       const duration = Date.now() - startTime;
       this.logger.info('Plugin reloaded successfully', {
         pluginName,
         version: plugin.version,
         duration
       });
-      
+
       return plugin;
 
     } catch (error) {
@@ -289,8 +287,8 @@ export class PluginManager implements IPluginManager {
    * @returns True if the plugin is loaded
    */
   isPluginLoaded(pluginName: string): boolean {
-    return this.activePlugins.has(pluginName) && 
-           this.getPluginStatus(pluginName) === PluginStatus.LOADED;
+    return this.activePlugins.has(pluginName) &&
+      this.getPluginStatus(pluginName) === PluginStatus.LOADED;
   }
 
   /**
@@ -313,7 +311,7 @@ export class PluginManager implements IPluginManager {
   } {
     const activePluginNames = Array.from(this.activePlugins.keys());
     const statusEntries = Array.from(this.pluginStatuses.entries());
-    
+
     const loaded = statusEntries.filter(([_, status]) => status === PluginStatus.LOADED).length;
     const failed = statusEntries.filter(([_, status]) => status === PluginStatus.FAILED).length;
 
@@ -322,7 +320,7 @@ export class PluginManager implements IPluginManager {
     const loadTimes = loadResults.map(r => r.metrics.loadTime);
     const totalLoadTime = loadTimes.reduce((sum, time) => sum + time, 0);
     const averageLoadTime = loadTimes.length > 0 ? totalLoadTime / loadTimes.length : 0;
-    
+
     let slowestPlugin: string | null = null;
     let maxLoadTime = 0;
     for (const [pluginName, result] of this.pluginLoadResults.entries()) {
@@ -359,7 +357,7 @@ export class PluginManager implements IPluginManager {
 
     const startTime = Date.now();
     this.logger.info('Initializing PluginManager with Feature Injector architecture');
-    
+
     try {
       // Ensure plugin directory exists
       await this.projectManager.ensureDirectoryExists(
@@ -377,7 +375,7 @@ export class PluginManager implements IPluginManager {
       // Discover existing plugins
       const discoveryOptions = PluginDiscoveryUtils.createDefaultOptions();
       const discoveredPlugins = await this.pluginDiscovery.discoverPlugins(discoveryOptions);
-      
+
       this.logger.info('Plugin discovery completed during initialization', {
         totalPlugins: discoveredPlugins.length,
         validPlugins: discoveredPlugins.filter(p => p.isValid).length
@@ -391,7 +389,7 @@ export class PluginManager implements IPluginManager {
 
       const duration = Date.now() - startTime;
       this.isInitialized = true;
-      
+
       this.logger.info('PluginManager initialized successfully', {
         pluginsDirectory: this.projectManager.getPluginsDirectory(),
         discoveredPlugins: discoveredPlugins.length,
@@ -417,7 +415,7 @@ export class PluginManager implements IPluginManager {
     try {
       // Unload all active plugins
       const pluginNames = Array.from(this.activePlugins.keys());
-      
+
       for (const pluginName of pluginNames) {
         try {
           await this.unloadPlugin(pluginName);
@@ -498,10 +496,10 @@ export class PluginManager implements IPluginManager {
    */
   async discoverAllPlugins(): Promise<DiscoveredPlugin[]> {
     await this.ensureInitialized();
-    
+
     const options = PluginDiscoveryUtils.createDefaultOptions();
     const discovered = await this.pluginDiscovery.discoverPlugins(options);
-    
+
     // Update local cache
     for (const plugin of discovered) {
       this.discoveredPlugins.set(plugin.name, plugin);
@@ -509,7 +507,7 @@ export class PluginManager implements IPluginManager {
         this.pluginStatuses.set(plugin.name, PluginStatus.UNLOADED);
       }
     }
-    
+
     return discovered;
   }
 
@@ -563,7 +561,7 @@ export class PluginManager implements IPluginManager {
     issues: string[];
   }> {
     await this.ensureInitialized();
-    
+
     const discovered = this.discoveredPlugins.get(pluginName);
     if (!discovered) {
       return {

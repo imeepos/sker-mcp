@@ -15,18 +15,12 @@ import {
   MCP_TOOLS,
   MCP_RESOURCES,
   MCP_PROMPTS,
-  SERVICE_MANAGER,
-  PROJECT_MANAGER,
-  PLUGIN_MANAGER,
-  MIDDLEWARE_EXECUTOR,
   FEATURE_INJECTOR,
   PLUGIN_CONFLICT_DETECTOR,
   PLUGIN_ISOLATION_OPTIONS,
   PLUGIN_SYSTEM_CONFIG,
-  ERROR_MANAGER,
   LOGGER,
   LOGGER_CONFIG,
-  LOGGER_FACTORY,
   LAYERED_LOGGER_FACTORY,
   CONFIG_MANAGER,
   PLUGIN_CONFIG_MANAGER,
@@ -50,6 +44,7 @@ import { ConsoleLogger } from './console-logger.js';
 import { MiddlewareExecutor } from './middleware/index.js';
 import { ErrorManager } from './errors/index.js';
 import { McpApplication } from './mcp-application.js';
+import { getLoggingConfig } from './logging/logging-config.js';
 
 /**
  * Default MCP server configuration
@@ -125,59 +120,21 @@ export function createPlatformProviders(): Provider[] {
       useClass: McpApplication
     },
     
-    // Manager class providers - using actual implementations
-    {
-      provide: SERVICE_MANAGER,
-      useClass: ServiceManager
-    },
-    
-    {
-      provide: PROJECT_MANAGER,
-      useClass: ProjectManager
-    },
-    
-    {
-      provide: PLUGIN_MANAGER,
-      useClass: PluginManager
-    },
-    
-    {
-      provide: MIDDLEWARE_EXECUTOR,
-      useClass: MiddlewareExecutor
-    },
-    
-    {
-      provide: ERROR_MANAGER,
-      useClass: ErrorManager
-    },
-    
     // Logger configuration provider - uses environment-based configuration
     {
       provide: LOGGER_CONFIG,
       useFactory: () => {
-        const { getLoggingConfig } = require('./logging/logging-config.js');
         return getLoggingConfig();
       }
     },
-    
-    // Winston Logger Factory provider
-    {
-      provide: LOGGER_FACTORY,
-      useFactory: (config: any, projectManager: any) => {
-        const { WinstonLoggerFactory } = require('./logging/winston-logger.js');
-        return new WinstonLoggerFactory(config, projectManager);
-      },
-      deps: [LOGGER_CONFIG, PROJECT_MANAGER]
-    },
-    
     // Layered Logger Factory provider
     {
       provide: LAYERED_LOGGER_FACTORY,
-      useFactory: (config: any, projectManager: any) => {
+      useFactory: (config: any, projectManager: ProjectManager) => {
         const { LayeredLoggerFactory } = require('./logging/layered-logger.js');
         return new LayeredLoggerFactory(config, projectManager);
       },
-      deps: [LOGGER_CONFIG, PROJECT_MANAGER]
+      deps: [LOGGER_CONFIG, ProjectManager]
     },
     
     // Main logger provider - using Layered logger system

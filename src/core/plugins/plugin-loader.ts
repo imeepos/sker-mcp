@@ -7,11 +7,10 @@
  */
 
 import { pathToFileURL } from 'url';
-import { join } from 'path';
 import { Injectable, Inject } from '@sker/di';
-import { LOGGER, PROJECT_MANAGER } from '../tokens.js';
+import { LOGGER } from '../tokens.js';
 import type { IWinstonLogger } from '../logging/winston-logger.js';
-import type { ProjectManager } from '../project-manager.js';
+import { ProjectManager } from '../project-manager.js';
 import type { IPlugin } from '../types.js';
 import type { DiscoveredPlugin } from './plugin-discovery.js';
 
@@ -99,7 +98,7 @@ export class PluginLoader {
 
   constructor(
     @Inject(LOGGER) private readonly logger: IWinstonLogger,
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager
   ) {}
 
   /**

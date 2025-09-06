@@ -7,11 +7,11 @@
  */
 
 import { promises as fs } from 'fs';
-import { join, basename } from 'path';
+import { join } from 'path';
 import { Injectable, Inject } from '@sker/di';
 import { z } from 'zod';
-import { PROJECT_MANAGER, LOGGER } from '../tokens.js';
-import type { ProjectManager } from '../project-manager.js';
+import { LOGGER } from '../tokens.js';
+import { ProjectManager } from '../project-manager.js';
 import type { IWinstonLogger } from '../logging/winston-logger.js';
 
 /**
@@ -113,7 +113,7 @@ export interface PluginDiscoveryOptions {
 @Injectable()
 export class PluginDiscovery {
   constructor(
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager,
     @Inject(LOGGER) private readonly logger: IWinstonLogger
   ) {}
 

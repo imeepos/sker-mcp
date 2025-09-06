@@ -19,8 +19,8 @@ import {
   EnvironmentUtils 
 } from './environment-config.js';
 import { Injectable, Inject } from '@sker/di';
-import { PROJECT_MANAGER, LOGGER } from '../tokens.js';
-import type { ProjectManager } from '../project-manager.js';
+import { LOGGER } from '../tokens.js';
+import { ProjectManager } from '../project-manager.js';
 import type { IWinstonLogger } from '../logging/winston-logger.js';
 import type { IMcpServerConfig } from '../types.js';
 import { EventEmitter } from 'events';
@@ -103,7 +103,7 @@ export class ConfigManager extends EventEmitter {
   private _hotReloadEnabled = false;
   
   constructor(
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager,
     @Inject(LOGGER) private readonly logger: IWinstonLogger
   ) {
     super();

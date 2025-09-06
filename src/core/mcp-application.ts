@@ -7,19 +7,18 @@
  */
 
 import { Injectable, Inject } from '@sker/di';
-import { 
+import {
   ProjectManager,
-  MCP_SERVER_CONFIG, 
-  SERVICE_MANAGER,
-  PROJECT_MANAGER,
-  PLUGIN_MANAGER,
+  MCP_SERVER_CONFIG,
   LOGGER,
-  type IMcpTool, 
-  type IMcpResource, 
-  type IMcpPrompt, 
+  type IMcpTool,
+  type IMcpResource,
+  type IMcpPrompt,
   type IMcpServerConfig,
-  type IPluginManager 
+  type IPluginManager,
+  PluginManager
 } from '@sker/mcp';
+import { ServiceManager, ServiceManagerStatus } from './service-manager';
 
 /**
  * 应用程序状态枚举
@@ -35,7 +34,7 @@ export enum ApplicationStatus {
 /**
  * 应用程序生命周期事件类型
  */
-export type ApplicationEvent = 
+export type ApplicationEvent =
   | 'starting'
   | 'started'
   | 'stopping'
@@ -55,27 +54,27 @@ export interface IServiceManager {
    * 启动服务管理器
    */
   start(): Promise<void>;
-  
+
   /**
    * 停止服务管理器
    */
   stop(): Promise<void>;
-  
+
   /**
    * 动态注册工具
    */
   registerTool(tool: IMcpTool): Promise<void>;
-  
+
   /**
    * 动态注册资源
    */
   registerResource(resource: IMcpResource): Promise<void>;
-  
+
   /**
    * 动态注册提示
    */
   registerPrompt(prompt: IMcpPrompt): Promise<void>;
-  
+
   /**
    * 获取当前状态
    */
@@ -97,15 +96,15 @@ export class McpApplication {
   private shutdownPromise: Promise<void> | null = null;
 
   constructor(
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager,
-    @Inject(SERVICE_MANAGER) private readonly serviceManager: IServiceManager,
-    @Inject(PLUGIN_MANAGER) private readonly pluginManager: IPluginManager,
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager,
+    @Inject(ServiceManager) private readonly serviceManager: IServiceManager,
+    @Inject(PluginManager) private readonly pluginManager: IPluginManager,
     @Inject(MCP_SERVER_CONFIG) private readonly config: IMcpServerConfig,
     @Inject(LOGGER) private readonly logger: any
   ) {
-    this.logger?.info('MCP 应用程序已初始化', { 
-      name: this.config.name, 
-      version: this.config.version 
+    this.logger?.info('MCP 应用程序已初始化', {
+      name: this.config.name,
+      version: this.config.version
     });
   }
 
@@ -121,16 +120,18 @@ export class McpApplication {
   async start(): Promise<void> {
     // 防止并发启动尝试
     if (this.startupPromise) {
+      this.logger.error(`防止并发启动尝试`)
       return this.startupPromise;
     }
 
     // 如果已在运行，立即返回
     if (this.status === ApplicationStatus.RUNNING) {
+      this.logger.error(`application is running`)
       return;
     }
 
     this.startupPromise = this.performStartup();
-    
+
     try {
       await this.startupPromise;
     } finally {
@@ -146,8 +147,8 @@ export class McpApplication {
       this.setStatus(ApplicationStatus.STARTING);
       this.emitEvent('starting');
 
-      this.logger?.info('正在启动 MCP 应用程序...', { 
-        config: this.config 
+      this.logger.info('正在启动 MCP 应用程序...', {
+        config: this.config
       });
 
       // 步骤 1: 创建项目目录结构
@@ -164,8 +165,8 @@ export class McpApplication {
 
       this.setStatus(ApplicationStatus.RUNNING);
       this.emitEvent('started');
-      
-      this.logger?.info('MCP 应用程序启动成功', {
+
+      this.logger.info('MCP 应用程序启动成功', {
         status: this.status,
         transport: this.config.transport
       });
@@ -173,12 +174,12 @@ export class McpApplication {
     } catch (error) {
       this.setStatus(ApplicationStatus.ERROR);
       this.emitEvent('error', error as Error);
-      
-      this.logger?.error('启动 MCP 应用程序失败', { 
+
+      this.logger.error('启动 MCP 应用程序失败', {
         error: (error as Error).message,
         stack: (error as Error).stack
       });
-      
+
       throw error;
     }
   }
@@ -203,7 +204,7 @@ export class McpApplication {
     }
 
     this.shutdownPromise = this.performShutdown();
-    
+
     try {
       await this.shutdownPromise;
     } finally {
@@ -231,18 +232,18 @@ export class McpApplication {
 
       this.setStatus(ApplicationStatus.STOPPED);
       this.emitEvent('stopped');
-      
+
       this.logger?.info('MCP 应用程序停止成功');
 
     } catch (error) {
       this.setStatus(ApplicationStatus.ERROR);
       this.emitEvent('error', error as Error);
-      
-      this.logger?.error('关闭期间出错', { 
+
+      this.logger?.error('关闭期间出错', {
         error: (error as Error).message,
         stack: (error as Error).stack
       });
-      
+
       throw error;
     }
   }
@@ -254,8 +255,8 @@ export class McpApplication {
     try {
       // 发现可用插件
       const pluginDirs = await this.projectManager.scanPluginsDirectory();
-      
-      this.logger?.debug('发现插件', { 
+
+      this.logger?.debug('发现插件', {
         plugins: pluginDirs,
         count: pluginDirs.length
       });
@@ -266,7 +267,7 @@ export class McpApplication {
           await this.pluginManager.loadPlugin(pluginName);
           this.logger?.debug('已加载插件', { plugin: pluginName });
         } catch (error) {
-          this.logger?.error('加载插件失败', { 
+          this.logger?.error('加载插件失败', {
             plugin: pluginName,
             error: (error as Error).message
           });
@@ -274,7 +275,7 @@ export class McpApplication {
         }
       }
     } catch (error) {
-      this.logger?.error('插件初始化失败', { 
+      this.logger?.error('插件初始化失败', {
         error: (error as Error).message
       });
       throw error;
@@ -287,13 +288,13 @@ export class McpApplication {
   private async shutdownPlugins(): Promise<void> {
     try {
       const activePlugins = this.pluginManager.getActivePlugins();
-      
+
       for (const plugin of activePlugins) {
         try {
           await this.pluginManager.unloadPlugin(plugin.name);
           this.logger?.debug('已卸载插件', { plugin: plugin.name });
         } catch (error) {
-          this.logger?.error('卸载插件失败', { 
+          this.logger?.error('卸载插件失败', {
             plugin: plugin.name,
             error: (error as Error).message
           });
@@ -301,7 +302,7 @@ export class McpApplication {
         }
       }
     } catch (error) {
-      this.logger?.error('插件关闭失败', { 
+      this.logger?.error('插件关闭失败', {
         error: (error as Error).message
       });
       // 关闭期间不抛出异常 - 记录日志并继续
@@ -371,10 +372,10 @@ export class McpApplication {
   private setStatus(status: ApplicationStatus): void {
     const previousStatus = this.status;
     this.status = status;
-    
-    this.logger?.debug('应用程序状态已变更', { 
-      from: previousStatus, 
-      to: status 
+
+    this.logger?.debug('应用程序状态已变更', {
+      from: previousStatus,
+      to: status
     });
   }
 
@@ -383,12 +384,12 @@ export class McpApplication {
    */
   private emitEvent(event: ApplicationEvent, error?: Error): void {
     this.logger?.debug('正在发出应用程序事件', { event, error: error?.message });
-    
+
     for (const listener of this.eventListeners) {
       try {
         listener(event, error);
       } catch (listenerError) {
-        this.logger?.error('事件监听器错误', { 
+        this.logger?.error('事件监听器错误', {
           event,
           error: (listenerError as Error).message
         });
@@ -403,7 +404,7 @@ export class McpApplication {
   setupGracefulShutdown(): void {
     const shutdownHandler = (signal: string) => {
       this.logger?.info(`接收到 ${signal} 信号，正在优雅关闭...`);
-      
+
       this.stop()
         .then(() => {
           this.logger?.info('关闭完成');
@@ -417,17 +418,17 @@ export class McpApplication {
 
     process.on('SIGINT', () => shutdownHandler('SIGINT'));
     process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
-    
+
     // 处理未捕获异常
     process.on('uncaughtException', (error) => {
-      this.logger?.error('未捕获异常', { 
-        error: error.message, 
-        stack: error.stack 
+      this.logger?.error('未捕获异常', {
+        error: error.message,
+        stack: error.stack
       });
-      
+
       this.setStatus(ApplicationStatus.ERROR);
       this.emitEvent('error', error);
-      
+
       // 尝试优雅关闭
       this.stop()
         .finally(() => process.exit(1));
@@ -436,15 +437,15 @@ export class McpApplication {
     // 处理未处理的 Promise 拒绝
     process.on('unhandledRejection', (reason) => {
       const error = reason instanceof Error ? reason : new Error(String(reason));
-      
-      this.logger?.error('未处理的 Promise 拒绝', { 
-        error: error.message, 
-        stack: error.stack 
+
+      this.logger?.error('未处理的 Promise 拒绝', {
+        error: error.message,
+        stack: error.stack
       });
-      
+
       this.setStatus(ApplicationStatus.ERROR);
       this.emitEvent('error', error);
-      
+
       // 尝试优雅关闭
       this.stop()
         .finally(() => process.exit(1));

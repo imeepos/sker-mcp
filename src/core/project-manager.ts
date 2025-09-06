@@ -9,10 +9,13 @@
 import path from 'path';
 import { promises as fs } from 'fs';
 import os from 'os';
+import { Injectable } from '@sker/di';
 
 /**
  * ProjectManager class handles project directory structure and path management
  */
+
+@Injectable({ providedIn: 'root' })
 export class ProjectManager {
   private readonly homeDirectory: string;
 
@@ -30,12 +33,12 @@ export class ProjectManager {
    */
   private resolveHomeDirectory(): string {
     const envHomeDir = process.env.SKER_HOME_DIR;
-    
+
     if (envHomeDir && envHomeDir.trim() !== '') {
       // Resolve relative paths to absolute paths
       return path.resolve(envHomeDir.trim());
     }
-    
+
     // Default to ~/.sker
     return path.join(os.homedir(), '.sker');
   }
@@ -77,7 +80,7 @@ export class ProjectManager {
     if (path.isAbsolute(pathToResolve)) {
       return pathToResolve;
     }
-    
+
     return path.resolve(pathToResolve);
   }
 
@@ -117,15 +120,15 @@ export class ProjectManager {
     try {
       const pluginsDir = this.getPluginsDirectory();
       await this.ensureDirectoryExists(pluginsDir);
-      
+
       const entries = await fs.readdir(pluginsDir, { withFileTypes: true });
-      
+
       // Return only directories
       return entries
         .filter(entry => entry.isDirectory())
         .map(entry => entry.name)
         .sort(); // Sort alphabetically for consistent ordering
-        
+
     } catch (error) {
       // If we can't read the directory, return empty array
       return [];
@@ -166,10 +169,10 @@ export class ProjectManager {
     try {
       const packageJsonPath = this.getPluginPackageJsonPath(pluginName);
       await fs.access(packageJsonPath);
-      
+
       const packageData = await fs.readFile(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageData);
-      
+
       // Basic validation - must have name and main/index
       return !!(packageJson.name && (packageJson.main || packageJson.index));
     } catch (error) {

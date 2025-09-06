@@ -8,8 +8,8 @@
  */
 
 import { Injectable, Inject } from '@sker/di';
-import { LOGGER_CONFIG, PROJECT_MANAGER } from '../tokens.js';
-import type { ProjectManager } from '../project-manager.js';
+import { LOGGER_CONFIG } from '../tokens.js';
+import { ProjectManager } from '../project-manager.js';
 import { WinstonLogger, WinstonLoggerConfig, IWinstonLogger } from './winston-logger.js';
 import path from 'path';
 
@@ -18,7 +18,7 @@ import path from 'path';
  */
 export enum LogLayer {
   PLATFORM = 'platform',
-  APPLICATION = 'application', 
+  APPLICATION = 'application',
   PLUGIN = 'plugin'
 }
 
@@ -67,13 +67,13 @@ export class LayeredWinstonLogger extends WinstonLogger {
     // Create layer-specific config
     const layeredConfig = LayeredWinstonLogger.createLayerConfig(layer, layerName, config, projectManager);
     super(component, layeredConfig, projectManager);
-    
+
     this.layer = layer;
     this.layerName = layerName;
   }
 
   private static createLayerConfig(
-    layer: LogLayer, 
+    layer: LogLayer,
     layerName: string | undefined,
     baseConfig: LayeredLoggerConfig,
     projectManager?: ProjectManager
@@ -86,7 +86,7 @@ export class LayeredWinstonLogger extends WinstonLogger {
     // Configure file transport based on layer
     if (config.transports?.file?.enabled && config.separateFiles !== false) {
       let filename: string;
-      
+
       switch (layer) {
         case LogLayer.PLATFORM:
           filename = path.join(logDir, 'platform', 'sker-platform-%DATE%.log');
@@ -138,7 +138,7 @@ export class LayeredWinstonLogger extends WinstonLogger {
       layer: this.layer,
       layerName: this.layerName
     };
-    
+
     const childLogger = super.child(childContext);
     return childLogger;
   }
@@ -147,7 +147,7 @@ export class LayeredWinstonLogger extends WinstonLogger {
 /**
  * Layered logger factory implementation
  */
-@Injectable()
+@Injectable({ providedIn: 'platform' })
 export class LayeredLoggerFactory implements ILayeredLoggerFactory {
   private loggers = new Map<string, LayeredWinstonLogger>();
   private layerConfigs = new Map<LogLayer, Partial<WinstonLoggerConfig>>();
@@ -155,7 +155,7 @@ export class LayeredLoggerFactory implements ILayeredLoggerFactory {
 
   constructor(
     @Inject(LOGGER_CONFIG) config: WinstonLoggerConfig,
-    @Inject(PROJECT_MANAGER) private readonly projectManager: ProjectManager
+    @Inject(ProjectManager) private readonly projectManager: ProjectManager
   ) {
     this.baseConfig = {
       ...config,
@@ -187,7 +187,7 @@ export class LayeredLoggerFactory implements ILayeredLoggerFactory {
 
   configureLayer(layer: LogLayer, config: Partial<WinstonLoggerConfig>): void {
     this.layerConfigs.set(layer, config);
-    
+
     // Update existing loggers in this layer
     for (const [key, logger] of this.loggers.entries()) {
       if (logger.getLayer() === layer) {
@@ -208,7 +208,7 @@ export class LayeredLoggerFactory implements ILayeredLoggerFactory {
 
   private createLayeredLogger(layer: LogLayer, component: string, layerName?: string): LayeredWinstonLogger {
     const key = this.createLoggerKey(layer, component, layerName);
-    
+
     // Return existing logger if found
     const existing = this.loggers.get(key);
     if (existing) {
@@ -226,13 +226,13 @@ export class LayeredLoggerFactory implements ILayeredLoggerFactory {
 
     // Create new layered logger
     const logger = new LayeredWinstonLogger(
-      component, 
-      layer, 
-      layerName, 
-      config, 
+      component,
+      layer,
+      layerName,
+      config,
       this.projectManager
     );
-    
+
     this.loggers.set(key, logger);
     return logger;
   }
