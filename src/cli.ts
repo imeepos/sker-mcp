@@ -1,24 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Command Line Interface for Sker Daemon MCP Server
+ * Sker Daemon MCP 服务器命令行界面
  * 
- * This module provides a command-line interface for managing the Sker Daemon MCP server.
- * It includes commands for starting, stopping, status checking, plugin management,
- * and configuration management.
+ * 该模块为管理 Sker Daemon MCP 服务器提供命令行界面。
+ * 包含启动、停止、状态检查、插件管理和配置管理等命令。
  */
 
-import 'reflect-metadata';
-import { Injector, createInjector } from '@sker/di';
-import { McpApplication } from './core/mcp-application.js';
+import { AppBootstrap } from './common/app-bootstrap.js';
 import { ProjectManager } from './core/project-manager.js';
-import { createMcpProviders, createPlatformProviders } from './core/providers.js';
 import { PROJECT_MANAGER } from './core/tokens.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 /**
- * CLI command interface
+ * CLI 命令接口
  */
 interface CliCommand {
   name: string;
@@ -31,7 +27,7 @@ interface CliCommand {
 
 
 /**
- * Parsed CLI arguments interface
+ * 解析的 CLI 参数接口
  */
 interface ParsedArgs {
   command: string;
@@ -40,74 +36,76 @@ interface ParsedArgs {
 }
 
 /**
- * Main CLI class
+ * 主 CLI 类
  */
 class SkerCli {
   private commands: Map<string, CliCommand> = new Map();
+  private bootstrap: AppBootstrap;
 
   constructor() {
+    this.bootstrap = new AppBootstrap();
     this.setupCommands();
   }
 
   /**
-   * Sets up all available CLI commands
+   * 设置所有可用的 CLI 命令
    */
   private setupCommands(): void {
-    // Start command
+    // 启动命令
     this.addCommand({
       name: 'start',
-      description: 'Start the MCP server',
+      description: '启动 MCP 服务器',
       aliases: ['run'],
       handler: this.handleStart.bind(this)
     });
 
-    // Status command
+    // 状态命令
     this.addCommand({
       name: 'status',
-      description: 'Show server status information',
+      description: '显示服务器状态信息',
       aliases: ['info'],
       handler: this.handleStatus.bind(this)
     });
 
-    // Init command
+    // 初始化命令
     this.addCommand({
       name: 'init',
-      description: 'Initialize project directory structure',
+      description: '初始化项目目录结构',
       handler: this.handleInit.bind(this)
     });
 
-    // Plugin commands
+    // 插件命令
     this.addCommand({
       name: 'plugin',
-      description: 'Plugin management commands',
+      description: '插件管理命令',
       args: ['action', 'plugin-name?'],
       handler: this.handlePlugin.bind(this)
     });
 
-    // Config commands
+    // 配置命令
     this.addCommand({
       name: 'config',
-      description: 'Configuration management commands',
+      description: '配置管理命令',
       args: ['action', 'key?', 'value?'],
       handler: this.handleConfig.bind(this)
     });
 
-    // Version command
+    // 版本命令
     this.addCommand({
       name: 'version',
-      description: 'Show version information',
+      description: '显示版本信息',
       aliases: ['v'],
       handler: this.handleVersion.bind(this)
     });
   }
 
   /**
-   * Adds a command to the CLI
+   * 向 CLI 添加命令
    */
   private addCommand(command: CliCommand): void {
     this.commands.set(command.name, command);
 
-    // Register aliases
+    // 注册别名
     if (command.aliases) {
       for (const alias of command.aliases) {
         this.commands.set(alias, command);
@@ -116,7 +114,7 @@ class SkerCli {
   }
 
   /**
-   * Parses command line arguments
+   * 解析命令行参数
    */
   private parseArguments(argv: string[]): ParsedArgs {
     const args = argv.slice(2);
@@ -126,13 +124,13 @@ class SkerCli {
       options: {}
     };
 
-    let i = 1; // Skip command
+    let i = 1; // 跳过命令
     while (i < args.length) {
       const arg = args[i];
       if (!arg) break;
 
       if (arg.startsWith('--')) {
-        // Long option
+        // 长选项
         const optionName = arg.slice(2);
         const nextArg = args[i + 1];
 
@@ -144,7 +142,7 @@ class SkerCli {
           i++;
         }
       } else if (arg.startsWith('-')) {
-        // Short option
+        // 短选项
         const optionName = arg.slice(1);
         const nextArg = args[i + 1];
 
@@ -156,7 +154,7 @@ class SkerCli {
           i++;
         }
       } else {
-        // Regular argument
+        // 常规参数
         result.args.push(arg);
         i++;
       }
@@ -166,53 +164,48 @@ class SkerCli {
   }
 
   /**
-   * Creates a configured injector
+   * 获取配置好的项目管理器
    */
-  private createInjector(): Injector {
-    const providers = [
-      ...createMcpProviders(),
-      ...createPlatformProviders()
-    ];
-
-    return createInjector(providers);
+  private getProjectManager(): ProjectManager {
+    const injector = this.bootstrap.createInjector();
+    return injector.get(PROJECT_MANAGER) as ProjectManager;
   }
 
   /**
-   * Handles the start command
+   * 处理启动命令
    */
   private async handleStart(_args: string[], options: Record<string, any>): Promise<void> {
-    console.log('🚀 Starting Sker Daemon MCP Server...');
+    console.log('🚀 正在启动 Sker Daemon MCP 服务器...');
 
     try {
-      // Apply options to environment
+      // 应用选项到环境变量
+      const config = AppBootstrap.parseEnvironmentConfig();
       if (options.home) {
-        process.env.SKER_HOME_DIR = options.home;
+        config.homeDir = options.home;
       }
       if (options.debug) {
-        process.env.DEBUG = 'true';
+        config.debug = true;
       }
       if (options.config) {
-        process.env.CONFIG_FILE = options.config;
+        config.configFile = options.config;
       }
 
-      // Create injector and application
-      const injector = this.createInjector();
-      const application = injector.get(McpApplication);
+      AppBootstrap.applyConfigToEnvironment(config);
 
-      // Set up graceful shutdown
-      application.setupGracefulShutdown();
+      // 设置优雅关闭
+      this.bootstrap.setupGracefulShutdown();
 
-      // Start the application
-      await application.start();
+      // 启动应用程序
+      await this.bootstrap.startApplication();
 
-      console.log('✅ Server started successfully');
-      console.log('📡 Listening on stdio transport');
+      console.log('✅ 服务器启动成功');
+      console.log('📡 正在监听 stdio 传输');
 
-      // Keep alive
+      // 保持运行
       process.stdin.resume();
 
     } catch (error) {
-      console.error('❌ Failed to start server:', (error as Error).message);
+      console.error('❌ 启动服务器失败:', (error as Error).message);
       if (options.debug) {
         console.error((error as Error).stack);
       }
@@ -221,68 +214,67 @@ class SkerCli {
   }
 
   /**
-   * Handles the status command
+   * 处理状态命令
    */
   private async handleStatus(_args: string[], options: Record<string, any>): Promise<void> {
-    console.log('📊 Sker Daemon MCP Server Status\n');
+    console.log('📊 Sker Daemon MCP 服务器状态\n');
 
     try {
-      const injector = this.createInjector();
-      const projectManager = injector.get(PROJECT_MANAGER) as ProjectManager;
+      const projectManager = this.getProjectManager();
 
-      // Show directory information
-      console.log('📁 Directory Information:');
-      console.log(`   Home: ${projectManager.getHomeDirectory()}`);
-      console.log(`   Plugins: ${projectManager.getPluginsDirectory()}`);
-      console.log(`   Config: ${projectManager.getConfigDirectory()}`);
-      console.log(`   Logs: ${projectManager.getLogsDirectory()}`);
+      // 显示目录信息
+      console.log('📁 目录信息:');
+      console.log(`   主目录: ${projectManager.getHomeDirectory()}`);
+      console.log(`   插件: ${projectManager.getPluginsDirectory()}`);
+      console.log(`   配置: ${projectManager.getConfigDirectory()}`);
+      console.log(`   日志: ${projectManager.getLogsDirectory()}`);
       console.log();
 
-      // Check directory existence
+      // 检查目录存在性
       const homeExists = await this.directoryExists(projectManager.getHomeDirectory());
       const pluginsExists = await this.directoryExists(projectManager.getPluginsDirectory());
       const configExists = await this.directoryExists(projectManager.getConfigDirectory());
       const logsExists = await this.directoryExists(projectManager.getLogsDirectory());
 
-      console.log('🗂️  Directory Status:');
-      console.log(`   Home: ${homeExists ? '✅ exists' : '❌ missing'}`);
-      console.log(`   Plugins: ${pluginsExists ? '✅ exists' : '❌ missing'}`);
-      console.log(`   Config: ${configExists ? '✅ exists' : '❌ missing'}`);
-      console.log(`   Logs: ${logsExists ? '✅ exists' : '❌ missing'}`);
+      console.log('🗂️  目录状态:');
+      console.log(`   主目录: ${homeExists ? '✅ 存在' : '❌ 缺失'}`);
+      console.log(`   插件: ${pluginsExists ? '✅ 存在' : '❌ 缺失'}`);
+      console.log(`   配置: ${configExists ? '✅ 存在' : '❌ 缺失'}`);
+      console.log(`   日志: ${logsExists ? '✅ 存在' : '❌ 缺失'}`);
       console.log();
 
-      // Scan plugins
+      // 扫描插件
       if (pluginsExists) {
         const plugins = await projectManager.scanPluginsDirectory();
-        console.log(`🔌 Plugins (${plugins.length}):`);
+        console.log(`🔌 插件 (${plugins.length}):`);
         if (plugins.length > 0) {
           for (const plugin of plugins) {
             const hasPackageJson = await projectManager.hasValidPluginPackageJson(plugin);
-            console.log(`   ${plugin}: ${hasPackageJson ? '✅ valid' : '❌ invalid'}`);
+            console.log(`   ${plugin}: ${hasPackageJson ? '✅ 有效' : '❌ 无效'}`);
           }
         } else {
-          console.log('   No plugins found');
+          console.log('   未找到插件');
         }
         console.log();
       }
 
-      // Environment information
-      console.log('🌍 Environment:');
+      // 环境信息
+      console.log('🌍 环境信息:');
       console.log(`   Node.js: ${process.version}`);
-      console.log(`   Platform: ${process.platform}`);
-      console.log(`   Architecture: ${process.arch}`);
-      console.log(`   CWD: ${process.cwd()}`);
+      console.log(`   平台: ${process.platform}`);
+      console.log(`   架构: ${process.arch}`);
+      console.log(`   工作目录: ${process.cwd()}`);
       console.log();
 
-      // Configuration
-      console.log('⚙️  Configuration:');
-      console.log(`   SKER_HOME_DIR: ${process.env.SKER_HOME_DIR || 'not set'}`);
+      // 配置信息
+      console.log('⚙️  配置:');
+      console.log(`   SKER_HOME_DIR: ${process.env.SKER_HOME_DIR || '未设置'}`);
       console.log(`   DEBUG: ${process.env.DEBUG || 'false'}`);
       console.log(`   LOG_LEVEL: ${process.env.LOG_LEVEL || 'info'}`);
-      console.log(`   CONFIG_FILE: ${process.env.CONFIG_FILE || 'not set'}`);
+      console.log(`   CONFIG_FILE: ${process.env.CONFIG_FILE || '未设置'}`);
 
     } catch (error) {
-      console.error('❌ Failed to get status:', (error as Error).message);
+      console.error('❌ 获取状态失败:', (error as Error).message);
       if (options.debug) {
         console.error((error as Error).stack);
       }
@@ -291,26 +283,25 @@ class SkerCli {
   }
 
   /**
-   * Handles the init command
+   * 处理初始化命令
    */
   private async handleInit(_args: string[], options: Record<string, any>): Promise<void> {
-    console.log('🏗️  Initializing Sker Daemon MCP project...');
+    console.log('🏗️  正在初始化 Sker Daemon MCP 项目...');
 
     try {
-      const injector = this.createInjector();
-      const projectManager = injector.get(PROJECT_MANAGER) as ProjectManager;
+      const projectManager = this.getProjectManager();
 
-      // Create directory structure
+      // 创建目录结构
       await projectManager.createProjectStructure();
 
-      console.log('✅ Project structure created:');
+      console.log('✅ 项目结构已创建:');
       console.log(`   📁 ${projectManager.getHomeDirectory()}`);
       console.log(`   📁 ${projectManager.getPluginsDirectory()}`);
       console.log(`   📁 ${projectManager.getConfigDirectory()}`);
       console.log(`   📁 ${projectManager.getLogsDirectory()}`);
 
     } catch (error) {
-      console.error('❌ Failed to initialize project:', (error as Error).message);
+      console.error('❌ 初始化项目失败:', (error as Error).message);
       if (options.debug) {
         console.error((error as Error).stack);
       }
@@ -319,7 +310,7 @@ class SkerCli {
   }
 
   /**
-   * Handles plugin commands
+   * 处理插件命令
    */
   private async handlePlugin(args: string[], options: Record<string, any>): Promise<void> {
     const action = args[0];
@@ -331,45 +322,44 @@ class SkerCli {
         break;
       case 'info':
         if (!pluginName) {
-          console.error('❌ Plugin name is required for info command');
+          console.error('❌ info 命令需要插件名称');
           process.exit(1);
         }
         await this.showPluginInfo(pluginName, options);
         break;
       default:
-        console.log('🔌 Plugin Commands:');
-        console.log('   list              List all available plugins');
-        console.log('   info <name>       Show plugin information');
+        console.log('🔌 插件命令:');
+        console.log('   list              列出所有可用插件');
+        console.log('   info <名称>        显示插件信息');
         break;
     }
   }
 
   /**
-   * Lists all plugins
+   * 列出所有插件
    */
   private async listPlugins(options: Record<string, any>): Promise<void> {
     try {
-      const injector = this.createInjector();
-      const projectManager = injector.get(PROJECT_MANAGER) as ProjectManager;
+      const projectManager = this.getProjectManager();
 
       const plugins = await projectManager.scanPluginsDirectory();
 
-      console.log(`🔌 Available Plugins (${plugins.length}):\n`);
+      console.log(`🔌 可用插件 (${plugins.length}):\n`);
 
       if (plugins.length === 0) {
-        console.log('   No plugins found');
-        console.log(`   Plugin directory: ${projectManager.getPluginsDirectory()}`);
+        console.log('   未找到插件');
+        console.log(`   插件目录: ${projectManager.getPluginsDirectory()}`);
         return;
       }
 
       for (const plugin of plugins) {
         const hasValidPackageJson = await projectManager.hasValidPluginPackageJson(plugin);
-        const status = hasValidPackageJson ? '✅ valid' : '❌ invalid';
+        const status = hasValidPackageJson ? '✅ 有效' : '❌ 无效';
         console.log(`   ${plugin}: ${status}`);
       }
 
     } catch (error) {
-      console.error('❌ Failed to list plugins:', (error as Error).message);
+      console.error('❌ 列出插件失败:', (error as Error).message);
       if (options.debug) {
         console.error((error as Error).stack);
       }
@@ -377,44 +367,43 @@ class SkerCli {
   }
 
   /**
-   * Shows plugin information
+   * 显示插件信息
    */
   private async showPluginInfo(pluginName: string, options: Record<string, any>): Promise<void> {
     try {
-      const injector = this.createInjector();
-      const projectManager = injector.get(PROJECT_MANAGER) as ProjectManager;
+      const projectManager = this.getProjectManager();
 
       const pluginExists = await projectManager.pluginDirectoryExists(pluginName);
       if (!pluginExists) {
-        console.error(`❌ Plugin '${pluginName}' not found`);
+        console.error(`❌ 插件 '${pluginName}' 未找到`);
         process.exit(1);
       }
 
       const hasValidPackageJson = await projectManager.hasValidPluginPackageJson(pluginName);
-      console.log(`🔌 Plugin Information: ${pluginName}\n`);
+      console.log(`🔌 插件信息: ${pluginName}\n`);
 
-      console.log(`📁 Directory: ${projectManager.getPluginDirectory(pluginName)}`);
-      console.log(`📄 Package.json: ${hasValidPackageJson ? '✅ valid' : '❌ invalid/missing'}`);
+      console.log(`📁 目录: ${projectManager.getPluginDirectory(pluginName)}`);
+      console.log(`📄 Package.json: ${hasValidPackageJson ? '✅ 有效' : '❌ 无效/缺失'}`);
 
       if (hasValidPackageJson) {
         const packageJsonPath = projectManager.getPluginPackageJsonPath(pluginName);
         const packageData = await fs.readFile(packageJsonPath, 'utf-8');
         const packageJson = JSON.parse(packageData);
 
-        console.log('\n📋 Package Information:');
-        console.log(`   Name: ${packageJson.name || 'not specified'}`);
-        console.log(`   Version: ${packageJson.version || 'not specified'}`);
-        console.log(`   Description: ${packageJson.description || 'not provided'}`);
-        console.log(`   Main: ${packageJson.main || packageJson.index || 'not specified'}`);
+        console.log('\n📋 包信息:');
+        console.log(`   名称: ${packageJson.name || '未指定'}`);
+        console.log(`   版本: ${packageJson.version || '未指定'}`);
+        console.log(`   描述: ${packageJson.description || '未提供'}`);
+        console.log(`   主入口: ${packageJson.main || packageJson.index || '未指定'}`);
 
         if (packageJson.mcpPlugin) {
-          console.log('\n🔧 MCP Plugin Configuration:');
+          console.log('\n🔧 MCP 插件配置:');
           console.log(`   ${JSON.stringify(packageJson.mcpPlugin, null, 2)}`);
         }
       }
 
     } catch (error) {
-      console.error('❌ Failed to show plugin info:', (error as Error).message);
+      console.error('❌ 显示插件信息失败:', (error as Error).message);
       if (options.debug) {
         console.error((error as Error).stack);
       }
@@ -422,7 +411,7 @@ class SkerCli {
   }
 
   /**
-   * Handles config commands
+   * 处理配置命令
    */
   private async handleConfig(args: string[], options: Record<string, any>): Promise<void> {
     const action = args[0];
@@ -432,90 +421,90 @@ class SkerCli {
         this.showConfig(options);
         break;
       default:
-        console.log('⚙️  Configuration Commands:');
-        console.log('   show              Show current configuration');
+        console.log('⚙️  配置命令:');
+        console.log('   show              显示当前配置');
         break;
     }
   }
 
   /**
-   * Shows current configuration
+   * 显示当前配置
    */
   private showConfig(_options: Record<string, any>): void {
-    console.log('⚙️  Current Configuration:\n');
+    console.log('⚙️  当前配置:\n');
 
-    console.log('Environment Variables:');
-    console.log(`   SKER_HOME_DIR: ${process.env.SKER_HOME_DIR || 'not set (default: ~/.sker)'}`);
+    console.log('环境变量:');
+    console.log(`   SKER_HOME_DIR: ${process.env.SKER_HOME_DIR || '未设置 (默认: ~/.sker)'}`);
     console.log(`   DEBUG: ${process.env.DEBUG || 'false'}`);
     console.log(`   LOG_LEVEL: ${process.env.LOG_LEVEL || 'info'}`);
-    console.log(`   CONFIG_FILE: ${process.env.CONFIG_FILE || 'not set'}`);
-    console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    console.log(`   CONFIG_FILE: ${process.env.CONFIG_FILE || '未设置'}`);
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV || '未设置'}`);
 
-    console.log('\nSystem Information:');
-    console.log(`   Node.js Version: ${process.version}`);
-    console.log(`   Platform: ${process.platform}`);
-    console.log(`   Architecture: ${process.arch}`);
-    console.log(`   Working Directory: ${process.cwd()}`);
+    console.log('\n系统信息:');
+    console.log(`   Node.js 版本: ${process.version}`);
+    console.log(`   平台: ${process.platform}`);
+    console.log(`   架构: ${process.arch}`);
+    console.log(`   工作目录: ${process.cwd()}`);
   }
 
   /**
-   * Handles version command
+   * 处理版本命令
    */
   private async handleVersion(_args: string[], options: Record<string, any>): Promise<void> {
     try {
-      // Read package.json to get version
+      // 读取 package.json 获取版本
       const packageJsonPath = path.join(process.cwd(), 'package.json');
       const packageData = await fs.readFile(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageData);
 
-      console.log(`Sker Daemon MCP Server v${packageJson.version}`);
+      console.log(`Sker Daemon MCP 服务器 v${packageJson.version}`);
       console.log(`Node.js ${process.version}`);
 
     } catch (error) {
-      console.log('Sker Daemon MCP Server (version unknown)');
+      console.log('Sker Daemon MCP 服务器 (版本未知)');
       if (options.debug) {
-        console.error('Failed to read version:', (error as Error).message);
+        console.error('读取版本失败:', (error as Error).message);
       }
     }
   }
 
   /**
-   * Shows help information
+   * 显示帮助信息
    */
   private showHelp(command?: string): void {
     if (command && this.commands.has(command)) {
       const cmd = this.commands.get(command)!;
-      console.log(`Usage: sker ${cmd.name} ${cmd.args?.join(' ') || ''}`);
+      console.log(`用法: sker ${cmd.name} ${cmd.args?.join(' ') || ''}`);
       console.log(`\n${cmd.description}`);
 
       if (cmd.aliases && cmd.aliases.length > 0) {
-        console.log(`\nAliases: ${cmd.aliases.join(', ')}`);
+        console.log(`\n别名: ${cmd.aliases.join(', ')}`);
       }
 
       return;
     }
 
     console.log(`
-Sker Daemon MCP Server CLI
+Sker Daemon MCP 服务器 CLI
 
-Usage: sker <command> [options]
+用法: sker <命令> [选项]
 
-Commands:
-  start, run            Start the MCP server
-  status, info          Show server status information
-  init                  Initialize project directory structure
-  plugin <action>       Plugin management (list, info <name>)
-  config <action>       Configuration management (show)
-  version, v            Show version information
-  help                  Show this help message
+命令:
+  start, run            启动 MCP 服务器
+  status, info          显示服务器状态信息
+  init                  初始化项目目录结构
+  plugin <动作>         插件管理 (list, info <名称>)
+  config <动作>         配置管理 (show)
+  version, v            显示版本信息
+  help                  显示此帮助信息
 
-Global Options:
-  -h, --help           Show help information
-  -d, --debug          Enable debug output
-  --home <dir>         Custom home directory
-  -c, --config <file>  Custom config file
+全局选项:
+  -h, --help           显示帮助信息
+  -d, --debug          启用调试输出
+  --home <目录>         自定义主目录
+  -c, --config <文件>   自定义配置文件
 
-Examples:
+示例:
   sker start --debug
   sker status
   sker init
@@ -524,16 +513,16 @@ Examples:
   sker config show
   sker version
 
-Environment Variables:
-  SKER_HOME_DIR        Custom home directory (default: ~/.sker)
-  DEBUG                Enable debug mode
-  LOG_LEVEL            Set log level
-  CONFIG_FILE          Custom config file path
+环境变量:
+  SKER_HOME_DIR        自定义主目录 (默认: ~/.sker)
+  DEBUG                启用调试模式
+  LOG_LEVEL            设置日志级别
+  CONFIG_FILE          自定义配置文件路径
     `.trim());
   }
 
   /**
-   * Utility method to check if directory exists
+   * 检查目录是否存在的工具方法
    */
   private async directoryExists(dirPath: string): Promise<boolean> {
     try {
@@ -545,30 +534,30 @@ Environment Variables:
   }
 
   /**
-   * Main CLI run method
+   * 主 CLI 运行方法
    */
   async run(argv: string[]): Promise<void> {
     const parsed = this.parseArguments(argv);
 
-    // Handle global help
+    // 处理全局帮助
     if (parsed.options.help || parsed.options.h) {
       this.showHelp(parsed.command === 'help' ? parsed.args[0] : undefined);
       return;
     }
 
-    // Find and execute command
+    // 查找并执行命令
     const command = this.commands.get(parsed.command);
 
     if (!command) {
-      console.error(`❌ Unknown command: ${parsed.command}`);
-      console.log('\nRun "sker help" to see available commands');
+      console.error(`❌ 未知命令: ${parsed.command}`);
+      console.log('\n运行 "sker help" 查看可用命令');
       process.exit(1);
     }
 
     try {
       await command.handler(parsed.args, parsed.options);
     } catch (error) {
-      console.error(`❌ Command failed: ${(error as Error).message}`);
+      console.error(`❌ 命令失败: ${(error as Error).message}`);
       if (parsed.options.debug || parsed.options.d) {
         console.error((error as Error).stack);
       }
@@ -578,15 +567,15 @@ Environment Variables:
 }
 
 /**
- * Main entry point
+ * 主入口点
  */
 async function main(): Promise<void> {
   const cli = new SkerCli();
   await cli.run(process.argv);
 }
 
-// Only run if this is the main module
+// 仅在这是主模块时运行
 main().catch((error) => {
-  console.error('💥 CLI execution failed:', error);
+  console.error('💥 CLI 执行失败:', error);
   process.exit(1);
 });

@@ -1,155 +1,67 @@
 #!/usr/bin/env node
 
 /**
- * Main Entry Point for Sker Daemon MCP Server
+ * Sker Daemon MCP 服务器主入口点
  * 
- * This is the primary entry point for the Sker Daemon MCP server application.
- * It sets up the dependency injection container, configures all providers,
- * and starts the MCP application.
+ * 这是 Sker Daemon MCP 服务器应用程序的主要入口点。
+ * 它设置依赖注入容器，配置所有提供程序，并启动 MCP 应用程序。
  * 
- * Features:
- * - Dependency injection setup with @sker/di
- * - Reflection metadata initialization
- * - Graceful error handling and logging
- * - Application lifecycle management
- * - Plugin system initialization
+ * 特性：
+ * - 使用 @sker/di 的依赖注入设置
+ * - 反射元数据初始化
+ * - 优雅的错误处理和日志记录
+ * - 应用程序生命周期管理
+ * - 插件系统初始化
  */
 
-import 'reflect-metadata';
-import { Injector, createPlatformInjector, createRootInjector } from '@sker/di';
-import { McpApplication } from './core/mcp-application.js';
-import { createMcpProviders, createPlatformProviders } from './core/providers.js';
+import { createRootInjector } from '@sker/di';
+import { AppBootstrap, AppConfig } from './common/app-bootstrap.js';
+
 
 /**
- * Application configuration interface
- */
-interface AppConfig {
-  /**
-   * Debug mode flag
-   */
-  debug: boolean;
-
-  /**
-   * Log level override
-   */
-  logLevel: string;
-
-  /**
-   * Custom config file path
-   */
-  configFile?: string;
-
-  /**
-   * Custom home directory
-   */
-  homeDir?: string;
-}
-
-/**
- * Main application class
+ * 主应用程序类
  */
 class MainApplication {
-  private injector: Injector | null = null;
-  private application: McpApplication | null = null;
-  private config: AppConfig = {
-    debug: false,
-    logLevel: 'info'
-  };
+  private bootstrap: AppBootstrap;
+  private config: AppConfig;
 
   /**
-   * Constructor initializes configuration from environment and CLI args
+   * 构造函数从环境变量和命令行参数初始化配置
    */
   constructor() {
-    this.parseConfiguration();
-  }
+    const parsed = AppBootstrap.parseCommandLineArgs(process.argv);
+    this.config = parsed.config;
+    this.bootstrap = new AppBootstrap();
 
-  /**
-   * Parses configuration from environment variables and command line arguments
-   */
-  private parseConfiguration(): void {
-    // Parse environment variables
-    this.config = {
-      debug: process.env.DEBUG === 'true' || process.env.NODE_ENV === 'development',
-      logLevel: process.env.LOG_LEVEL || 'info'
-    };
-
-    // Add optional properties if they exist
-    if (process.env.CONFIG_FILE) {
-      this.config.configFile = process.env.CONFIG_FILE;
-    }
-    if (process.env.SKER_HOME_DIR) {
-      this.config.homeDir = process.env.SKER_HOME_DIR;
-    }
-
-    // Parse command line arguments (simple implementation)
-    const args = process.argv.slice(2);
-    for (let i = 0; i < args.length; i++) {
-      const arg = args[i];
-
-      switch (arg) {
-        case '--debug':
-        case '-d':
-          this.config.debug = true;
-          break;
-
-        case '--log-level':
-          if (i + 1 < args.length) {
-            const nextLevel = args[++i];
-            if (nextLevel) {
-              this.config.logLevel = nextLevel;
-            }
-          }
-          break;
-
-        case '--config':
-        case '-c':
-          if (i + 1 < args.length) {
-            const nextConfig = args[++i];
-            if (nextConfig) {
-              this.config.configFile = nextConfig;
-            }
-          }
-          break;
-
-        case '--home':
-          if (i + 1 < args.length) {
-            const nextHome = args[++i];
-            if (nextHome) {
-              this.config.homeDir = nextHome;
-            }
-          }
-          break;
-
-        case '--help':
-          this.showHelp();
-          process.exit(0);
-      }
+    if (parsed.showHelp) {
+      this.showHelp();
+      process.exit(0);
     }
   }
 
   /**
-   * Shows help information
+   * 显示帮助信息
    */
   private showHelp(): void {
     console.error(`
-Sker Daemon MCP Server
+Sker Daemon MCP 服务器
 
-Usage: sker-mcp [options]
+用法: sker-mcp [选项]
 
-Options:
-  -d, --debug              Enable debug mode
-  --log-level <level>      Set log level (error|warn|info|debug|trace)
-  -c, --config <file>      Use custom config file
-  -h, --home <dir>         Use custom home directory
-  --help                   Show this help message
+选项:
+  -d, --debug              启用调试模式
+  --log-level <级别>       设置日志级别 (error|warn|info|debug|trace)
+  -c, --config <文件>      使用自定义配置文件
+  -h, --home <目录>        使用自定义主目录
+  --help                   显示此帮助信息
 
-Environment Variables:
-  DEBUG=true               Enable debug mode
-  LOG_LEVEL=<level>        Set log level
-  CONFIG_FILE=<file>       Custom config file path
-  SKER_HOME_DIR=<dir>      Custom home directory
+环境变量:
+  DEBUG=true               启用调试模式
+  LOG_LEVEL=<级别>         设置日志级别
+  CONFIG_FILE=<文件>       自定义配置文件路径
+  SKER_HOME_DIR=<目录>     自定义主目录
 
-Examples:
+示例:
   sker-mcp --debug
   sker-mcp --log-level debug --home ~/.sker-dev
   SKER_HOME_DIR=/custom/path sker-mcp
@@ -157,161 +69,87 @@ Examples:
   }
 
   /**
-   * Initializes the dependency injection container
-   */
-  private setupDependencyInjection(): void {
-    console.error('Setting up dependency injection...');
-
-    // Create injector with all providers
-    const providers = [
-      ...createMcpProviders(),
-      ...createPlatformProviders()
-    ];
-
-    this.injector = createPlatformInjector(providers);
-
-    console.error('Dependency injection configured successfully');
-  }
-
-  /**
-   * Creates and configures the MCP application
-   */
-  private createApplication(): void {
-    if (!this.injector) {
-      throw new Error('Injector not initialized');
-    }
-
-    console.error('Creating MCP application...');
-
-    try {
-      // Create the main application instance
-      this.application = this.injector.get(McpApplication);
-
-      if (!this.application) {
-        throw new Error('Failed to create McpApplication instance');
-      }
-
-      // Set up graceful shutdown
-      this.application.setupGracefulShutdown();
-
-      console.error('MCP application created successfully');
-
-    } catch (error) {
-      console.error('Failed to create MCP application:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Starts the application
+   * 启动应用程序
    */
   private async startApplication(): Promise<void> {
-    if (!this.application) {
-      throw new Error('Application not created');
-    }
-
-    console.error('Starting MCP application...');
+    console.error('正在启动 MCP 应用程序...');
 
     try {
-      await this.application.start();
+      await this.bootstrap.startApplication();
 
-      console.error('✅ Sker Daemon MCP Server is running');
-      console.error('📡 Transport: stdio');
-      console.error('📁 Home directory:', process.env.SKER_HOME_DIR || '~/.sker');
+      console.error('✅ Sker Daemon MCP 服务器正在运行');
+      console.error('📡 传输协议: stdio');
+      console.error('📁 主目录:', process.env.SKER_HOME_DIR || '~/.sker');
 
       if (this.config.debug) {
-        console.error('🐛 Debug mode is enabled');
+        console.error('🐛 调试模式已启用');
       }
 
-      // Keep the process alive
+      // 保持进程运行
       this.keepAlive();
 
     } catch (error) {
-      console.error('❌ Failed to start MCP application:', error);
+      console.error('❌ 启动 MCP 应用程序失败:', error);
       throw error;
     }
   }
 
   /**
-   * Keeps the process alive and handles cleanup
+   * 保持进程运行并处理清理
    */
   private keepAlive(): void {
-    // The process will stay alive due to the MCP server's stdio transport
-    // This method exists for any additional keep-alive logic if needed
+    // 由于 MCP 服务器的 stdio 传输，进程将保持运行
+    // 此方法存在是为了处理任何额外的保活逻辑（如果需要）
 
-    // Log periodic status (in debug mode only)
+    // 记录周期性状态（仅在调试模式下）
     if (this.config.debug) {
       const statusInterval = setInterval(() => {
-        if (this.application?.isRunning()) {
-          console.error(`🟢 Status: ${this.application.getStatus()}`);
+        const application = this.bootstrap.getApplication();
+        if (application?.isRunning()) {
+          console.error(`🟢 状态: ${application.getStatus()}`);
         } else {
           clearInterval(statusInterval);
         }
-      }, 30000); // Every 30 seconds
+      }, 30000); // 每30秒
     }
   }
 
   /**
-   * Main run method
+   * 主运行方法
    */
   async run(): Promise<void> {
     try {
-      console.error('🚀 Starting Sker Daemon MCP Server...');
+      console.error('🚀 正在启动 Sker Daemon MCP 服务器...');
 
-      // Apply environment variable overrides
-      if (this.config.homeDir) {
-        process.env.SKER_HOME_DIR = this.config.homeDir;
-      }
+      // 应用配置到环境变量
+      AppBootstrap.applyConfigToEnvironment(this.config);
 
-      // Set debug mode
-      if (this.config.debug) {
-        process.env.DEBUG = 'true';
-        process.env.NODE_ENV = 'development';
-      }
+      // 设置优雅关闭
+      this.bootstrap.setupGracefulShutdown();
 
-      // Setup dependency injection
-      this.setupDependencyInjection();
-
-      // Create application
-      this.createApplication();
-
-      // Start the application
+      // 启动应用程序
       await this.startApplication();
 
     } catch (error) {
-      console.error('💥 Fatal error during startup:', error);
+      console.error('💥 启动期间发生致命错误:', error);
 
-      // Try to cleanup if possible
-      if (this.application) {
-        try {
-          await this.application.stop();
-        } catch (cleanupError) {
-          console.error('Error during cleanup:', cleanupError);
-        }
+      // 尝试清理（如果可能）
+      try {
+        await this.bootstrap.stopApplication();
+      } catch (cleanupError) {
+        console.error('清理过程中出错:', cleanupError);
       }
 
-      process.exit(1);
+      AppBootstrap.handleFatalError(error as Error, this.config.debug);
     }
   }
 }
 
-/**
- * Error handling for uncaught exceptions
- */
-process.on('uncaughtException', (error) => {
-  console.error('💥 Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Promise Rejection at:', promise);
-  console.error('Reason:', reason);
-  process.exit(1);
-});
+// 设置全局错误处理器
+AppBootstrap.setupGlobalErrorHandlers();
 
 /**
- * Entry point - create and run the application
+ * 入口点 - 创建并运行应用程序
  */
 async function main(): Promise<void> {
   createRootInjector([]);
@@ -319,8 +157,8 @@ async function main(): Promise<void> {
   await app.run();
 }
 
-// Only run if this is the main module
+// 仅在这是主模块时运行
 main().catch((error) => {
-  console.error('💥 Main execution failed:', error);
+  console.error('💥 主程序执行失败:', error);
   process.exit(1);
 });
