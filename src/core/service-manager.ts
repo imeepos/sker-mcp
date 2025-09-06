@@ -14,11 +14,13 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
   ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
   GetPromptRequestSchema,
   ListPromptsRequestSchema,
   type CallToolRequest,
   type ReadResourceRequest,
-  type GetPromptRequest
+  type GetPromptRequest,
+  type ListResourceTemplatesRequest
 } from '@modelcontextprotocol/sdk/types.js';
 
 import {
@@ -31,6 +33,7 @@ import {
 import type {
   IMcpTool,
   IMcpResource,
+  IMcpResourceTemplate,
   IMcpPrompt,
   IMcpServerConfig
 } from '@sker/mcp';
@@ -76,6 +79,7 @@ export class ServiceManager {
   private status: ServiceManagerStatus = ServiceManagerStatus.STOPPED;
   private registeredTools = new Map<string, IMcpTool>();
   private registeredResources = new Map<string, IMcpResource>();
+  private registeredResourceTemplates = new Map<string, IMcpResourceTemplate>();
   private registeredPrompts = new Map<string, IMcpPrompt>();
   private preBoundTools = new Map<string, PreBoundTool>();
   private preBoundResources = new Map<string, PreBoundResource>();
@@ -257,6 +261,35 @@ export class ServiceManager {
   }
 
   /**
+   * Registers a resource template with the MCP server
+   */
+  async registerResourceTemplate(template: IMcpResourceTemplate): Promise<void> {
+    try {
+      if (this.registeredResourceTemplates.has(template.name)) {
+        throw new Error(`Resource template '${template.name}' is already registered`);
+      }
+
+      // Validate resource template structure
+      this.validateResourceTemplate(template);
+
+      // Add to our registry
+      this.registeredResourceTemplates.set(template.name, template);
+
+      this.logger?.debug('Resource template registered', { 
+        templateName: template.name,
+        uriTemplate: template.uriTemplate 
+      });
+
+    } catch (error) {
+      this.logger?.error('Failed to register resource template', {
+        templateName: template.name,
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Registers a prompt dynamically
    */
   async registerPrompt(prompt: IMcpPrompt): Promise<void> {
@@ -361,6 +394,40 @@ export class ServiceManager {
       this.logger?.debug('Listed prompts', { count: prompts.length });
       return { prompts };
     });
+
+    // Handle list resource templates requests
+    this.mcpServer.setRequestHandler(ListResourceTemplatesRequestSchema, async (request: ListResourceTemplatesRequest) => {
+      const resourceTemplates = Array.from(this.registeredResourceTemplates.values()).map(template => ({
+        uriTemplate: template.uriTemplate,
+        name: template.name,
+        title: template.title,
+        description: template.description,
+        mimeType: template.mimeType
+      }));
+
+      this.logger?.debug('Listed resource templates', { count: resourceTemplates.length });
+      
+      // Handle pagination if cursor is provided
+      const { cursor } = request.params || {};
+      let filteredTemplates = resourceTemplates;
+      let nextCursor: string | undefined;
+      
+      if (cursor) {
+        // Simple pagination based on template name
+        const startIndex = resourceTemplates.findIndex(t => t.name === cursor);
+        if (startIndex >= 0) {
+          filteredTemplates = resourceTemplates.slice(startIndex + 1);
+        }
+      }
+      
+      // For now, we return all templates without pagination limit
+      // In the future, this could be configurable
+      
+      return { 
+        resourceTemplates: filteredTemplates,
+        nextCursor 
+      };
+    });
   }
 
   /**
@@ -372,9 +439,22 @@ export class ServiceManager {
       await this.registerTool(tool);
     }
 
-    // Register initial resources
+    // Register initial resources and templates
     for (const resource of this.resources) {
-      await this.registerResource(resource);
+      if (resource.isTemplate) {
+        // Convert to resource template and register
+        const template: IMcpResourceTemplate = {
+          uriTemplate: resource.uri,
+          name: resource.name,
+          title: (resource as any).title,
+          description: resource.description,
+          mimeType: resource.mimeType
+        };
+        await this.registerResourceTemplate(template);
+      } else {
+        // Register as regular resource
+        await this.registerResource(resource);
+      }
     }
 
     // Register initial prompts
@@ -385,6 +465,7 @@ export class ServiceManager {
     this.logger?.info('Initial components registered', {
       tools: this.registeredTools.size,
       resources: this.registeredResources.size,
+      resourceTemplates: this.registeredResourceTemplates.size,
       prompts: this.registeredPrompts.size
     });
   }
@@ -601,6 +682,24 @@ export class ServiceManager {
 
     if (typeof resource.handler !== 'function') {
       throw new Error('Resource must have a valid handler function');
+    }
+  }
+
+  /**
+   * Validates resource template structure
+   */
+  private validateResourceTemplate(template: IMcpResourceTemplate): void {
+    if (!template.uriTemplate || typeof template.uriTemplate !== 'string') {
+      throw new Error('Resource template must have a valid URI template');
+    }
+
+    if (!template.name || typeof template.name !== 'string') {
+      throw new Error('Resource template must have a valid name');
+    }
+
+    // Validate URI template format (basic check for RFC 6570)
+    if (!template.uriTemplate.includes('{') || !template.uriTemplate.includes('}')) {
+      throw new Error('Resource template URI must contain template variables (e.g., {variable})');
     }
   }
 

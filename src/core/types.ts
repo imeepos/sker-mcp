@@ -9,10 +9,12 @@
 import type {
   Tool,
   Resource,
+  ResourceTemplate,
   Prompt,
   CallToolRequest,
   ReadResourceRequest,
-  GetPromptRequest
+  GetPromptRequest,
+  ListResourceTemplatesRequest
 } from '@modelcontextprotocol/sdk/types.js';
 import type { z } from 'zod';
 
@@ -20,7 +22,9 @@ import type { z } from 'zod';
 export type {
   CallToolRequest,
   ReadResourceRequest,
-  GetPromptRequest
+  GetPromptRequest,
+  ListResourceTemplatesRequest,
+  ResourceTemplate
 } from '@modelcontextprotocol/sdk/types.js';
 
 // ==================== MCP Interface Types ====================
@@ -63,6 +67,24 @@ export interface IMcpResource extends Resource {
    * Optional error handler for the resource
    */
   errorHandler?: (error: Error, request: ReadResourceRequest) => Promise<any>;
+  
+  /**
+   * Indicates if this resource should be treated as a template
+   * If true, the uri field should contain a URI template pattern
+   */
+  isTemplate?: boolean;
+}
+
+/**
+ * Core MCP Resource Template interface
+ * Represents a parameterized resource template that can generate multiple resources
+ */
+export interface IMcpResourceTemplate extends ResourceTemplate {
+  /**
+   * Optional title for display purposes
+   * If not provided, name should be used for display
+   */
+  title?: string;
 }
 
 /**
@@ -302,6 +324,61 @@ export interface ResourceMetadata {
   
   /**
    * Service class that provides this resource
+   */
+  serviceClass: new (...args: any[]) => any;
+  
+  /**
+   * Method name in the service class
+   */
+  methodName: string;
+  
+  /**
+   * Middleware to apply
+   */
+  middleware: string[];
+  
+  /**
+   * Error handler if specified
+   */
+  errorHandler?: string;
+  
+  /**
+   * Indicates if this resource is a template
+   */
+  isTemplate?: boolean;
+}
+
+/**
+ * Resource template metadata for registration and management
+ */
+export interface ResourceTemplateMetadata {
+  /**
+   * URI template following RFC 6570
+   */
+  uriTemplate: string;
+  
+  /**
+   * Template name
+   */
+  name: string;
+  
+  /**
+   * Template title for display
+   */
+  title?: string;
+  
+  /**
+   * Template description
+   */
+  description?: string;
+  
+  /**
+   * Template MIME type
+   */
+  mimeType?: string;
+  
+  /**
+   * Service class that provides this template
    */
   serviceClass: new (...args: any[]) => any;
   

@@ -13,6 +13,7 @@ import type { Injector } from '@sker/di';
 import type { 
   ToolMetadata, 
   ResourceMetadata, 
+  ResourceTemplateMetadata,
   PromptMetadata, 
   ServiceConstructor,
   IMcpTool,
@@ -43,6 +44,11 @@ export interface AllMetadata {
    * Collected resource metadata
    */
   resources: ResourceMetadata[];
+  
+  /**
+   * Collected resource template metadata
+   */
+  resourceTemplates: ResourceTemplateMetadata[];
   
   /**
    * Collected prompt metadata
@@ -175,7 +181,8 @@ export class MetadataCollector {
               serviceClass,
               methodName: propertyName,
               middleware: metadata.middleware || [],
-              errorHandler: metadata.errorHandler
+              errorHandler: metadata.errorHandler,
+              isTemplate: metadata.isTemplate
             });
           }
         }
@@ -183,6 +190,45 @@ export class MetadataCollector {
     }
 
     return resourceMetadata;
+  }
+
+  /**
+   * Collect resource template metadata from all registered services
+   * 
+   * @returns Array of resource template metadata
+   */
+  collectResourceTemplateMetadata(): ResourceTemplateMetadata[] {
+    const resourceTemplateMetadata: ResourceTemplateMetadata[] = [];
+
+    for (const serviceClass of this.registeredServices) {
+      const prototype = serviceClass.prototype;
+      
+      // Get all property names from the prototype chain
+      const propertyNames = this.getAllPropertyNames(prototype);
+      
+      for (const propertyName of propertyNames) {
+        if (typeof prototype[propertyName] === 'function') {
+          const metadata = Reflect.getMetadata('mcp:resource', prototype, propertyName);
+          
+          // Only collect resources marked as templates
+          if (metadata && metadata.isTemplate) {
+            resourceTemplateMetadata.push({
+              uriTemplate: metadata.uri, // For templates, uri contains the template
+              name: metadata.name,
+              title: metadata.title,
+              description: metadata.description,
+              mimeType: metadata.mimeType,
+              serviceClass,
+              methodName: propertyName,
+              middleware: metadata.middleware || [],
+              errorHandler: metadata.errorHandler
+            });
+          }
+        }
+      }
+    }
+
+    return resourceTemplateMetadata;
   }
 
   /**
@@ -230,6 +276,7 @@ export class MetadataCollector {
     return {
       tools: this.collectToolMetadata(),
       resources: this.collectResourceMetadata(),
+      resourceTemplates: this.collectResourceTemplateMetadata(),
       prompts: this.collectPromptMetadata()
     };
   }
