@@ -206,12 +206,8 @@ export class ServiceManager {
       // Validate tool structure
       this.validateTool(tool);
 
-      // Register with MCP server
-      this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-        if (request.params.name === tool.name) {
-          return await this.handleToolCall(tool, request);
-        }
-      });
+      // Register with MCP server (removed individual handler registration)
+      // Individual tool handlers will be managed by the central tool dispatch handler
 
       // Add to our registry
       this.registeredTools.set(tool.name, tool);
@@ -239,12 +235,8 @@ export class ServiceManager {
       // Validate resource structure
       this.validateResource(resource);
 
-      // Register with MCP server
-      this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-        if (this.matchesResourceUri(resource.uri, request.params.uri)) {
-          return await this.handleResourceRead(resource, request);
-        }
-      });
+      // Register with MCP server (removed individual handler registration)
+      // Individual resource handlers will be managed by the central resource dispatch handler
 
       // Add to our registry
       this.registeredResources.set(resource.uri, resource);
@@ -301,12 +293,8 @@ export class ServiceManager {
       // Validate prompt structure
       this.validatePrompt(prompt);
 
-      // Register with MCP server
-      this.mcpServer.setRequestHandler(GetPromptRequestSchema, async (request) => {
-        if (request.params.name === prompt.name) {
-          return await this.handlePromptGet(prompt, request);
-        }
-      });
+      // Register with MCP server (removed individual handler registration)
+      // Individual prompt handlers will be managed by the central prompt dispatch handler
 
       // Add to our registry
       this.registeredPrompts.set(prompt.name, prompt);
@@ -370,6 +358,23 @@ export class ServiceManager {
       return { tools };
     });
 
+    // Handle tool calls (central dispatcher)
+    this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const toolName = request.params.name;
+      const tool = this.registeredTools.get(toolName);
+      
+      if (!tool) {
+        throw new Error(`Tool '${toolName}' not found`);
+      }
+
+      // Check if this is a pre-bound tool
+      if (this.preBoundTools.has(toolName)) {
+        return await this.handlePreBoundToolCall(tool, request);
+      } else {
+        return await this.handleToolCall(tool, request);
+      }
+    });
+
     // Handle list resources requests
     this.mcpServer.setRequestHandler(ListResourcesRequestSchema, async () => {
       const resources = Array.from(this.registeredResources.values()).map(resource => ({
@@ -383,6 +388,25 @@ export class ServiceManager {
       return { resources };
     });
 
+    // Handle resource reads (central dispatcher)
+    this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const requestUri = request.params.uri;
+      
+      // Find matching resource
+      for (const [uri, resource] of this.registeredResources.entries()) {
+        if (this.matchesResourceUri(resource.uri, requestUri)) {
+          // Check if this is a pre-bound resource
+          if (this.preBoundResources.has(uri)) {
+            return await this.handlePreBoundResourceRead(resource, request);
+          } else {
+            return await this.handleResourceRead(resource, request);
+          }
+        }
+      }
+      
+      throw new Error(`Resource '${requestUri}' not found`);
+    });
+
     // Handle list prompts requests
     this.mcpServer.setRequestHandler(ListPromptsRequestSchema, async () => {
       const prompts = Array.from(this.registeredPrompts.values()).map(prompt => ({
@@ -393,6 +417,23 @@ export class ServiceManager {
 
       this.logger?.debug('Listed prompts', { count: prompts.length });
       return { prompts };
+    });
+
+    // Handle prompt gets (central dispatcher)
+    this.mcpServer.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      const promptName = request.params.name;
+      const prompt = this.registeredPrompts.get(promptName);
+      
+      if (!prompt) {
+        throw new Error(`Prompt '${promptName}' not found`);
+      }
+
+      // Check if this is a pre-bound prompt
+      if (this.preBoundPrompts.has(promptName)) {
+        return await this.handlePreBoundPromptGet(prompt, request);
+      } else {
+        return await this.handlePromptGet(prompt, request);
+      }
     });
 
     // Handle list resource templates requests
@@ -752,39 +793,20 @@ export class ServiceManager {
         isolatedInstance
       );
 
-      // Register pre-bound tools with MCP server handlers
+      // Register pre-bound tools (handlers managed by central dispatcher)
       for (const tool of preBoundServices.tools) {
-        // Set up MCP server handler for this tool
-        this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-          if (request.params.name === tool.name) {
-            return await this.handlePreBoundToolCall(tool, request);
-          }
-        });
-
         this.preBoundTools.set(tool.name, tool);
         this.registeredTools.set(tool.name, tool);
       }
 
-      // Register pre-bound resources with MCP server handlers
+      // Register pre-bound resources (handlers managed by central dispatcher)
       for (const resource of preBoundServices.resources) {
-        this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-          if (this.matchesResourceUri(resource.uri, request.params.uri)) {
-            return await this.handlePreBoundResourceRead(resource, request);
-          }
-        });
-
         this.preBoundResources.set(resource.uri, resource);
         this.registeredResources.set(resource.uri, resource);
       }
 
-      // Register pre-bound prompts with MCP server handlers
+      // Register pre-bound prompts (handlers managed by central dispatcher)
       for (const prompt of preBoundServices.prompts) {
-        this.mcpServer.setRequestHandler(GetPromptRequestSchema, async (request) => {
-          if (request.params.name === prompt.name) {
-            return await this.handlePreBoundPromptGet(prompt, request);
-          }
-        });
-
         this.preBoundPrompts.set(prompt.name, prompt);
         this.registeredPrompts.set(prompt.name, prompt);
       }

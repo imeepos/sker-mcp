@@ -317,6 +317,13 @@ export class FeatureInjector implements IFeatureInjector {
       providers.push(...plugin.providers);
     }
 
+    // Add plugin services as providers
+    if (plugin.services) {
+      for (const serviceClass of plugin.services) {
+        providers.push({ provide: serviceClass, useClass: serviceClass });
+      }
+    }
+
     // Create child injector with selective parent access
     const childProviders = permissions.parentServices 
       ? [...providers] // Allow access to parent services
@@ -342,6 +349,13 @@ export class FeatureInjector implements IFeatureInjector {
     // Add plugin-specific providers
     if (plugin.providers) {
       providers.push(...plugin.providers);
+    }
+
+    // Add plugin services as providers
+    if (plugin.services) {
+      for (const serviceClass of plugin.services) {
+        providers.push({ provide: serviceClass, useClass: serviceClass });
+      }
     }
 
     // Add minimal core services if needed

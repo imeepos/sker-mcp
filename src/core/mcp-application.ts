@@ -266,6 +266,23 @@ export class McpApplication {
         try {
           await this.pluginManager.loadPlugin(pluginName);
           this.logger?.debug('已加载插件', { plugin: pluginName });
+
+          // 获取插件的隔离实例并注册服务到 MCP Server
+          const isolatedInstance = this.pluginManager.getIsolatedPlugin(pluginName);
+          if (isolatedInstance) {
+            try {
+              await this.serviceManager.registerPluginPreBoundServices(isolatedInstance);
+              this.logger?.debug('已注册插件服务到 MCP Server', { plugin: pluginName });
+            } catch (registrationError) {
+              this.logger?.error('注册插件服务失败', {
+                plugin: pluginName,
+                error: (registrationError as Error).message
+              });
+              // 服务注册失败，但插件已加载，继续处理其他插件
+            }
+          } else {
+            this.logger?.warn('无法获取插件隔离实例', { plugin: pluginName });
+          }
         } catch (error) {
           this.logger?.error('加载插件失败', {
             plugin: pluginName,
@@ -291,6 +308,18 @@ export class McpApplication {
 
       for (const plugin of activePlugins) {
         try {
+          // 先取消注册插件服务
+          try {
+            await this.serviceManager.unregisterPluginPreBoundServices(plugin.name);
+            this.logger?.debug('已取消注册插件服务', { plugin: plugin.name });
+          } catch (unregisterError) {
+            this.logger?.error('取消注册插件服务失败', {
+              plugin: plugin.name,
+              error: (unregisterError as Error).message
+            });
+            // 取消注册失败也继续卸载插件
+          }
+
           await this.pluginManager.unloadPlugin(plugin.name);
           this.logger?.debug('已卸载插件', { plugin: plugin.name });
         } catch (error) {

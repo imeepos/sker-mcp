@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Sker Daemon MCP 服务器主入口点
  * 
@@ -41,7 +39,8 @@ class MainApplication {
    * 显示帮助信息
    */
   private showHelp(): void {
-    console.error(`
+    // Help is shown via stdio, so use process.stdout instead of console.error
+    process.stdout.write(`
 Sker Daemon MCP 服务器
 
 用法: sker-mcp [选项]
@@ -63,31 +62,26 @@ Sker Daemon MCP 服务器
   sker-mcp --debug
   sker-mcp --log-level debug --home ~/.sker-dev
   SKER_HOME_DIR=/custom/path sker-mcp
-    `.trim());
+    `.trim() + '\n');
   }
 
   /**
    * 启动应用程序
    */
   private async startApplication(): Promise<void> {
-    console.error('正在启动 MCP 应用程序...');
-
+    // Remove console output that interferes with MCP stdio protocol
+    
     try {
       await this.bootstrap.startApplication();
 
-      console.error('✅ Sker Daemon MCP 服务器正在运行');
-      console.error('📡 传输协议: stdio');
-      console.error('📁 主目录:', process.env.SKER_HOME_DIR || '~/.sker');
-
-      if (this.config.debug) {
-        console.error('🐛 调试模式已启用');
-      }
-
+      // MCP server is now running silently over stdio
+      // Status messages removed to prevent JSON parsing errors
+      
       // 保持进程运行
       this.keepAlive();
 
     } catch (error) {
-      console.error('❌ 启动 MCP 应用程序失败:', error);
+      // Fatal startup errors - no console output to prevent MCP stdio interference
       throw error;
     }
   }
@@ -100,16 +94,8 @@ Sker Daemon MCP 服务器
     // 此方法存在是为了处理任何额外的保活逻辑（如果需要）
 
     // 记录周期性状态（仅在调试模式下）
-    if (this.config.debug) {
-      const statusInterval = setInterval(() => {
-        const application = this.bootstrap.getApplication();
-        if (application?.isRunning()) {
-          console.error(`🟢 状态: ${application.getStatus()}`);
-        } else {
-          clearInterval(statusInterval);
-        }
-      }, 30000); // 每30秒
-    }
+    // Debug status logging removed to prevent MCP stdio interference
+    // Status monitoring can be enabled via proper logging system if needed
   }
 
   /**
@@ -117,8 +103,8 @@ Sker Daemon MCP 服务器
    */
   async run(): Promise<void> {
     try {
-      console.error('🚀 正在启动 Sker Daemon MCP 服务器...');
-
+      // Remove startup message to prevent MCP stdio interference
+      
       // 应用配置到环境变量
       AppBootstrap.applyConfigToEnvironment(this.config);
 
@@ -129,13 +115,13 @@ Sker Daemon MCP 服务器
       await this.startApplication();
 
     } catch (error) {
-      console.error('💥 启动期间发生致命错误:', error);
+      // Fatal errors - no console output to prevent MCP stdio interference
 
       // 尝试清理（如果可能）
       try {
         await this.bootstrap.stopApplication();
       } catch (cleanupError) {
-        console.error('清理过程中出错:', cleanupError);
+        // Cleanup errors - no console output to prevent MCP stdio interference
       }
 
       AppBootstrap.handleFatalError(error as Error, this.config.debug);
@@ -150,14 +136,14 @@ AppBootstrap.setupGlobalErrorHandlers();
  * 入口点 - 创建并运行应用程序
  */
 async function main(): Promise<void> {
-  createRootInjector()
+  createRootInjector();
+  createPlatformInjector();
   const app = new MainApplication();
-  createPlatformInjector()
   await app.run();
 }
 
 // 仅在这是主模块时运行
 main().catch((error) => {
-  console.error('💥 主程序执行失败:', error);
+  // Fatal errors - no console output to prevent MCP stdio interference
   process.exit(1);
 });
