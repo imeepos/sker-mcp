@@ -631,7 +631,7 @@ export class ServiceManager {
   }
 
   /**
-   * Register pre-bound services from an isolated plugin instance
+   * Register pre-bound services from an isolated plugin instance using MetadataCollector
    */
   async registerPluginPreBoundServices(
     isolatedInstance: IsolatedPluginInstance,
@@ -642,31 +642,50 @@ export class ServiceManager {
     prompts: PreBoundPrompt[];
   }> {
     try {
-      this.logger?.info('Registering pre-bound services from plugin', {
+      this.logger?.info('Registering pre-bound services from plugin using MetadataCollector', {
         plugin: isolatedInstance.plugin.name,
         version: isolatedInstance.plugin.version
       });
 
-      const preBoundServices = await this.preBindingManager.createPreBoundServicesFromPlugin(
-        isolatedInstance,
-        options
+      // Use MetadataCollector to create pre-bound services with proper metadata handling
+      const { MetadataCollector } = await import('./metadata-collector.js');
+      const preBoundServices = await MetadataCollector.createPreBoundServicesFromPlugin(
+        isolatedInstance
       );
 
-      // Register pre-bound tools
+      // Register pre-bound tools with MCP server handlers
       for (const tool of preBoundServices.tools) {
+        // Set up MCP server handler for this tool
+        this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+          if (request.params.name === tool.name) {
+            return await this.handlePreBoundToolCall(tool, request);
+          }
+        });
+
         this.preBoundTools.set(tool.name, tool);
-        // Also register as regular tool so it appears in listings
         this.registeredTools.set(tool.name, tool);
       }
 
-      // Register pre-bound resources
+      // Register pre-bound resources with MCP server handlers
       for (const resource of preBoundServices.resources) {
+        this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+          if (this.matchesResourceUri(resource.uri, request.params.uri)) {
+            return await this.handlePreBoundResourceRead(resource, request);
+          }
+        });
+
         this.preBoundResources.set(resource.uri, resource);
         this.registeredResources.set(resource.uri, resource);
       }
 
-      // Register pre-bound prompts
+      // Register pre-bound prompts with MCP server handlers
       for (const prompt of preBoundServices.prompts) {
+        this.mcpServer.setRequestHandler(GetPromptRequestSchema, async (request) => {
+          if (request.params.name === prompt.name) {
+            return await this.handlePreBoundPromptGet(prompt, request);
+          }
+        });
+
         this.preBoundPrompts.set(prompt.name, prompt);
         this.registeredPrompts.set(prompt.name, prompt);
       }
@@ -775,6 +794,114 @@ export class ServiceManager {
         return this.preBoundPrompts.has(identifier);
       default:
         return false;
+    }
+  }
+
+  /**
+   * Handle pre-bound tool call with enhanced middleware and error handling
+   */
+  private async handlePreBoundToolCall(tool: any, request: CallToolRequest): Promise<any> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger?.debug('Handling pre-bound tool call', {
+        toolName: tool.name,
+        arguments: request.params.arguments,
+        pluginName: tool.pluginMetadata?.pluginName
+      });
+
+      // Use the tool's built-in handler which already has middleware and error handling
+      const result = await tool.handler(request);
+
+      const duration = Date.now() - startTime;
+      this.logger?.debug('Pre-bound tool call completed', {
+        toolName: tool.name,
+        duration
+      });
+
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger?.error('Pre-bound tool call failed', {
+        toolName: tool.name,
+        error: (error as Error).message,
+        duration
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Handle pre-bound resource read with enhanced middleware and error handling
+   */
+  private async handlePreBoundResourceRead(resource: any, request: ReadResourceRequest): Promise<any> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger?.debug('Handling pre-bound resource read', {
+        resourceUri: resource.uri,
+        requestUri: request.params.uri,
+        pluginName: resource.pluginMetadata?.pluginName
+      });
+
+      // Use the resource's built-in handler which already has middleware and error handling
+      const result = await resource.handler(request);
+
+      const duration = Date.now() - startTime;
+      this.logger?.debug('Pre-bound resource read completed', {
+        resourceUri: resource.uri,
+        duration
+      });
+
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger?.error('Pre-bound resource read failed', {
+        resourceUri: resource.uri,
+        error: (error as Error).message,
+        duration
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Handle pre-bound prompt get with enhanced middleware and error handling
+   */
+  private async handlePreBoundPromptGet(prompt: any, request: GetPromptRequest): Promise<any> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger?.debug('Handling pre-bound prompt get', {
+        promptName: prompt.name,
+        arguments: request.params.arguments,
+        pluginName: prompt.pluginMetadata?.pluginName
+      });
+
+      // Use the prompt's built-in handler which already has middleware and error handling
+      const result = await prompt.handler(request);
+
+      const duration = Date.now() - startTime;
+      this.logger?.debug('Pre-bound prompt get completed', {
+        promptName: prompt.name,
+        duration
+      });
+
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger?.error('Pre-bound prompt get failed', {
+        promptName: prompt.name,
+        error: (error as Error).message,
+        duration
+      });
+
+      throw error;
     }
   }
 
