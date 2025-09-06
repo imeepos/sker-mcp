@@ -227,6 +227,17 @@ export interface IMcpServerConfig {
     type: 'stdio' | 'http';
     host?: string;
     port?: number;
+    http?: {
+      cors?: boolean;
+      corsOrigins?: string[];
+      enableSessions?: boolean;
+      enableJsonResponse?: boolean;
+      requestTimeout?: number;
+      maxBodySize?: string;
+      enableDnsRebindingProtection?: boolean;
+      allowedHosts?: string[];
+      allowedOrigins?: string[];
+    };
   };
   
   /**

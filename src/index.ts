@@ -41,6 +41,10 @@ export { ProjectManager } from './core/project-manager';
 export { ServiceManager } from './core/service-manager';
 export { PluginManager } from './core/plugin-manager';
 
+// 传输层
+export { HttpServerTransport, HttpTransportStatus } from './core/transports/http-server-transport';
+export type { HttpTransportConfig } from './core/transports/http-server-transport';
+
 // 元数据收集器
 export { MetadataCollector } from './core/metadata-collector';
 export type { AllMetadata } from './core/metadata-collector';

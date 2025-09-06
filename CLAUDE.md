@@ -13,6 +13,7 @@
 - [🛡️ **错误处理**](./docs/error-handling.md) - 统一错误处理机制
 - [🚀 **中间件系统**](./docs/middleware-system.md) - 洋葱模型中间件架构
 - [📝 **日志系统**](./docs/logging-system.md) - Winston 分层日志架构
+- [🌐 **HTTP 传输**](./docs/http-transport.md) - MCP HTTP 传输协议实现
 
 ### 开发规范
 - [📦 **模块导入规范**](./docs/module-imports.md) - 统一的模块导入路径规范
@@ -54,6 +55,7 @@ set SKER_HOME_DIR=C:\custom\path\to\sker
 - **依赖注入**: @sker/di ^1.0.4
 - **类型验证**: Zod ^3.25.76
 - **反射元数据**: reflect-metadata ^0.1.13
+- **HTTP 服务**: Express.js ^5.1.0 (用于 HTTP 传输)
 
 ## 🏁 快速导航
 **架构了解？** 参考 [🏗️ 核心架构](./docs/core-architecture.md)

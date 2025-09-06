@@ -9,6 +9,8 @@
 import { Injectable, Inject } from '@sker/di';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { HttpServerTransport, type HttpTransportConfig } from './transports/http-server-transport.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -75,7 +77,7 @@ export interface TransportConfig {
 @Injectable({ providedIn: 'auto' })
 export class ServiceManager {
   private mcpServer: McpServer;
-  private transport: StdioServerTransport | null = null;
+  private transport: Transport | null = null;
   private status: ServiceManagerStatus = ServiceManagerStatus.STOPPED;
   private registeredTools = new Map<string, IMcpTool>();
   private registeredResources = new Map<string, IMcpResource>();
@@ -524,10 +526,28 @@ export class ServiceManager {
         break;
 
       case 'http':
-        // HTTP transport would be implemented here
-        // For now, fall back to stdio
-        this.transport = new StdioServerTransport();
-        this.logger?.warn('HTTP transport not yet implemented, using STDIO');
+        const httpSettings = transportConfig.http || {};
+        const httpConfig: HttpTransportConfig = {
+          host: transportConfig.host || 'localhost',
+          port: transportConfig.port || 3000,
+          cors: httpSettings.cors ?? true,
+          corsOrigins: httpSettings.corsOrigins || ['*'],
+          enableSessions: httpSettings.enableSessions ?? true,
+          enableJsonResponse: httpSettings.enableJsonResponse ?? false,
+          requestTimeout: httpSettings.requestTimeout || 30000,
+          maxBodySize: httpSettings.maxBodySize || '10MB',
+          enableDnsRebindingProtection: httpSettings.enableDnsRebindingProtection ?? false,
+          allowedHosts: httpSettings.allowedHosts || [],
+          allowedOrigins: httpSettings.allowedOrigins || []
+        };
+        
+        this.transport = new HttpServerTransport(httpConfig, this.logger);
+        this.logger?.debug('Set up HTTP transport', { 
+          host: httpConfig.host, 
+          port: httpConfig.port,
+          cors: httpConfig.cors,
+          enableSessions: httpConfig.enableSessions
+        });
         break;
 
       default:

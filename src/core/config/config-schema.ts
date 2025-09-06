@@ -23,19 +23,40 @@ export const ServerConfigSchema = z.object({
     /** Transport type */
     type: z.enum(['stdio', 'http']).default('stdio'),
 
+    /** HTTP server host (optional for stdio) */
+    host: z.string().optional(),
+
+    /** HTTP server port (optional for stdio) */
+    port: z.number().int().min(1000).max(65535).optional(),
+
     /** HTTP transport specific settings */
     http: z.object({
-      /** HTTP server port */
-      port: z.number().int().min(1000).max(65535).default(3000),
-
-      /** HTTP server host */
-      host: z.string().default('localhost'),
-
       /** Enable CORS */
-      cors: z.boolean().default(false),
+      cors: z.boolean().default(true),
+
+      /** CORS origin whitelist */
+      corsOrigins: z.array(z.string()).default(['*']),
+
+      /** Enable session management */
+      enableSessions: z.boolean().default(true),
+
+      /** Enable JSON response mode (disable SSE streaming) */
+      enableJsonResponse: z.boolean().default(false),
 
       /** Request timeout in milliseconds */
-      timeout: z.number().int().min(1000).max(300000).default(30000)
+      requestTimeout: z.number().int().min(1000).max(300000).default(30000),
+
+      /** Maximum request body size */
+      maxBodySize: z.string().regex(/^\d+[KMGT]?B$/i).default('10MB'),
+
+      /** Enable DNS rebinding protection */
+      enableDnsRebindingProtection: z.boolean().default(false),
+
+      /** Allowed hosts for DNS rebinding protection */
+      allowedHosts: z.array(z.string()).default([]),
+
+      /** Allowed origins for DNS rebinding protection */
+      allowedOrigins: z.array(z.string()).default([])
     }).optional()
   }).default({ type: 'stdio' }),
 
