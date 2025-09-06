@@ -16,7 +16,7 @@
     "dist"
   ],
   "bin": {
-    "sker": "dist/main.js"
+    "sker": "dist/main.cjs"
   },
   "scripts": {
     "build": "tsup",
