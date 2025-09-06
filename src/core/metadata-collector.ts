@@ -326,20 +326,40 @@ export class MetadataCollector {
           throw new Error(`Method ${metadata.methodName} not found on service instance`);
         }
 
+        // Get parameter schemas to determine if we need parameter mapping
+        const parameterSchemas = Reflect.getMetadata('mcp:tool:params', serviceInstance, metadata.methodName);
+        
+        // Prepare method arguments
+        let methodArgs: any[];
+        if (parameterSchemas && parameterSchemas.length > 0) {
+          // Map object parameters to method parameters based on @Input decorators
+          methodArgs = [];
+          const args = request.params.arguments || {};
+          
+          for (const paramSchema of parameterSchemas) {
+            if (paramSchema && paramSchema.name) {
+              methodArgs[paramSchema.index] = args[paramSchema.name];
+            }
+          }
+        } else {
+          // Legacy mode: pass entire arguments object
+          methodArgs = [request.params.arguments];
+        }
+
         // Apply middleware if present
         if (metadata.middleware && metadata.middleware.length > 0) {
           return await MetadataCollector.executeWithMiddleware(
             boundService,
             'tool',
             request,
-            () => method.call(serviceInstance, request.params.arguments),
+            () => method.apply(serviceInstance, methodArgs),
             metadata,
             injector
           );
         }
 
         // Direct method call
-        return await method.call(serviceInstance, request.params.arguments);
+        return await method.apply(serviceInstance, methodArgs);
       } catch (error) {
         // Apply error handler if present
         if (metadata.errorHandler) {
@@ -509,20 +529,40 @@ export class MetadataCollector {
           throw new Error(`Method ${metadata.methodName} not found on service instance`);
         }
 
+        // Get parameter schemas to determine if we need parameter mapping
+        const parameterSchemas = Reflect.getMetadata('mcp:tool:params', serviceInstance, metadata.methodName);
+        
+        // Prepare method arguments
+        let methodArgs: any[];
+        if (parameterSchemas && parameterSchemas.length > 0) {
+          // Map object parameters to method parameters based on @Input decorators
+          methodArgs = [];
+          const args = request.params.arguments || {};
+          
+          for (const paramSchema of parameterSchemas) {
+            if (paramSchema && paramSchema.name) {
+              methodArgs[paramSchema.index] = args[paramSchema.name];
+            }
+          }
+        } else {
+          // Legacy mode: pass entire arguments object
+          methodArgs = [request.params.arguments];
+        }
+
         // Apply middleware if present
         if (metadata.middleware && metadata.middleware.length > 0) {
           return await MetadataCollector.executeWithMiddleware(
             boundService,
             'prompt',
             request,
-            () => method.call(serviceInstance, request.params.arguments),
+            () => method.apply(serviceInstance, methodArgs),
             metadata,
             injector
           );
         }
 
         // Direct method call
-        return await method.call(serviceInstance, request.params.arguments);
+        return await method.apply(serviceInstance, methodArgs);
       } catch (error) {
         // Apply error handler if present
         if (metadata.errorHandler) {
