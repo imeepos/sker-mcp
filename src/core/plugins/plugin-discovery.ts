@@ -32,8 +32,8 @@ export const PluginPackageSchema = z.object({
   main: z.string().default('index.js'),
   type: z.enum(['module', 'commonjs']).optional(),
   keywords: z.array(z.string()).optional(),
-  dependencies: z.record(z.string()).optional(),
-  peerDependencies: z.record(z.string()).optional(),
+  dependencies: z.record(z.string(), z.string()).optional(),
+  peerDependencies: z.record(z.string(), z.string()).optional(),
   // MCP-specific metadata
   mcp: z.object({
     // Plugin type classification
@@ -425,7 +425,7 @@ export class PluginDiscovery {
       const validationErrors: string[] = [];
       
       if (error instanceof z.ZodError) {
-        validationErrors.push(...error.errors.map(e => `${e.path.join('.')}: ${e.message}`));
+        validationErrors.push(...error.issues.map(e => `${e.path.join('.')}: ${e.message}`));
       } else {
         validationErrors.push('Invalid metadata format');
       }

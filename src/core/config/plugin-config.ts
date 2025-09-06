@@ -188,7 +188,7 @@ export class PluginConfigManager extends EventEmitter {
    */
   getPluginIsolationLevel(pluginName: string): PluginIsolationLevel {
     const mainConfig = this._configManager.getConfig();
-    const pluginIsolation = mainConfig.plugins.isolation.plugins[pluginName] ||
+    const pluginIsolation = (mainConfig.plugins.isolation.plugins as Record<string, 'none' | 'service' | 'full'>)[pluginName] ||
       mainConfig.plugins.isolation.default;
 
     return pluginIsolation as PluginIsolationLevel;

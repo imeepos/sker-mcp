@@ -14,57 +14,57 @@ import { z } from 'zod';
 export const ServerConfigSchema = z.object({
   /** Server name */
   name: z.string().default('sker-daemon-mcp'),
-  
+
   /** Server version */
   version: z.string().default('1.0.0'),
-  
+
   /** Transport configuration */
   transport: z.object({
     /** Transport type */
     type: z.enum(['stdio', 'http']).default('stdio'),
-    
+
     /** HTTP transport specific settings */
     http: z.object({
       /** HTTP server port */
       port: z.number().int().min(1000).max(65535).default(3000),
-      
+
       /** HTTP server host */
       host: z.string().default('localhost'),
-      
+
       /** Enable CORS */
       cors: z.boolean().default(false),
-      
+
       /** Request timeout in milliseconds */
       timeout: z.number().int().min(1000).max(300000).default(30000)
     }).optional()
   }).default({ type: 'stdio' }),
-  
+
   /** Server capabilities */
   capabilities: z.object({
     /** Enable logging */
     logging: z.boolean().default(true),
-    
+
     /** Enable sampling */
     sampling: z.boolean().default(false),
-    
+
     /** Enable experimental features */
     experimental: z.boolean().default(false)
-  }).default({}),
-  
+  }).default({ logging: true, sampling: false, experimental: false }),
+
   /** Resource limits */
   limits: z.object({
     /** Maximum number of concurrent requests */
     maxConcurrentRequests: z.number().int().min(1).max(1000).default(100),
-    
+
     /** Request timeout in milliseconds */
     requestTimeout: z.number().int().min(1000).max(300000).default(30000),
-    
+
     /** Maximum request body size in bytes */
     maxRequestSize: z.number().int().min(1024).max(10485760).default(1048576), // 1MB
-    
+
     /** Maximum response size in bytes */
     maxResponseSize: z.number().int().min(1024).max(10485760).default(5242880) // 5MB
-  }).default({})
+  }).default({} as any)
 });
 
 /**
@@ -73,69 +73,69 @@ export const ServerConfigSchema = z.object({
 export const LoggingConfigSchema = z.object({
   /** Global logging level */
   level: z.enum(['error', 'warn', 'info', 'debug', 'verbose', 'silly']).default('info'),
-  
+
   /** Logging format */
   format: z.enum(['json', 'simple', 'dev']).default('simple'),
-  
+
   /** Enable colorized output */
   colorize: z.boolean().default(true),
-  
+
   /** Enable timestamp */
   timestamp: z.boolean().default(true),
-  
+
   /** Layer-specific configurations */
   layers: z.object({
     /** Platform layer logging */
     platform: z.object({
       /** Log level */
       level: z.enum(['error', 'warn', 'info', 'debug', 'verbose', 'silly']).default('warn'),
-      
+
       /** Enable console output */
       console: z.boolean().default(true),
-      
+
       /** Enable file output */
       file: z.boolean().default(true)
-    }).default({}),
-    
+    }).default({} as any),
+
     /** Application layer logging */
     application: z.object({
       /** Log level */
       level: z.enum(['error', 'warn', 'info', 'debug', 'verbose', 'silly']).default('info'),
-      
+
       /** Enable console output */
       console: z.boolean().default(true),
-      
+
       /** Enable file output */
       file: z.boolean().default(true)
-    }).default({}),
-    
+    }).default({} as any),
+
     /** Plugin layer logging */
     plugin: z.object({
       /** Log level */
       level: z.enum(['error', 'warn', 'info', 'debug', 'verbose', 'silly']).default('debug'),
-      
+
       /** Enable console output */
       console: z.boolean().default(false),
-      
+
       /** Enable file output */
       file: z.boolean().default(true)
-    }).default({})
-  }).default({}),
-  
+    }).default({} as any)
+  }).default({} as any),
+
   /** File rotation settings */
   rotation: z.object({
     /** Maximum file size (e.g., '20MB') */
     maxSize: z.string().regex(/^\d+[KMGT]?B$/i).default('20MB'),
-    
+
     /** Maximum number of files to keep */
     maxFiles: z.union([z.number().int().min(1), z.string()]).default(14),
-    
+
     /** Date pattern for rotation */
     datePattern: z.string().default('YYYY-MM-DD'),
-    
+
     /** Enable compression */
     compress: z.boolean().default(true)
-  }).default({})
+  }).default({} as any)
 });
 
 /**
@@ -146,40 +146,40 @@ export const PluginConfigSchema = z.object({
   discovery: z.object({
     /** Plugin directories to search */
     directories: z.array(z.string()).default(['plugins']),
-    
+
     /** Maximum search depth */
     maxDepth: z.number().int().min(1).max(10).default(3),
-    
+
     /** Watch for changes */
     watch: z.boolean().default(false),
-    
+
     /** Include development plugins */
     includeDev: z.boolean().default(false)
-  }).default({}),
-  
+  }).default({} as any),
+
   /** Plugin loading settings */
   loading: z.object({
     /** Enable parallel loading */
     parallel: z.boolean().default(true),
-    
+
     /** Loading timeout in milliseconds */
     timeout: z.number().int().min(1000).max(60000).default(10000),
-    
+
     /** Maximum concurrent loads */
     maxConcurrent: z.number().int().min(1).max(10).default(3)
-  }).default({}),
-  
+  }).default({} as any),
+
   /** Plugin isolation settings */
   isolation: z.object({
     /** Default isolation level */
     default: z.enum(['none', 'service', 'full']).default('service'),
-    
+
     /** Plugin-specific isolation levels */
-    plugins: z.record(z.enum(['none', 'service', 'full'])).default({})
-  }).default({}),
-  
+    plugins: z.record(z.string(), z.enum(['none', 'service', 'full'])).default({} as any)
+  }).default({} as any),
+
   /** Plugin-specific configurations */
-  plugins: z.record(z.any()).default({})
+  plugins: z.record(z.string(), z.any()).default({} as any)
 });
 
 /**
@@ -188,36 +188,36 @@ export const PluginConfigSchema = z.object({
 export const SecurityConfigSchema = z.object({
   /** Enable authentication */
   authentication: z.boolean().default(false),
-  
+
   /** Enable authorization */
   authorization: z.boolean().default(false),
-  
+
   /** API key settings */
   apiKey: z.object({
     /** Enable API key authentication */
     enabled: z.boolean().default(false),
-    
+
     /** API key header name */
     header: z.string().default('X-API-Key'),
-    
+
     /** Valid API keys */
     keys: z.array(z.string()).default([])
-  }).default({}),
-  
+  }).default({} as any),
+
   /** Rate limiting settings */
   rateLimit: z.object({
     /** Enable rate limiting */
     enabled: z.boolean().default(false),
-    
+
     /** Maximum requests per window */
     maxRequests: z.number().int().min(1).max(10000).default(100),
-    
+
     /** Time window in milliseconds */
     windowMs: z.number().int().min(1000).max(3600000).default(60000), // 1 minute
-    
+
     /** Skip failed requests */
     skipFailedRequests: z.boolean().default(false)
-  }).default({})
+  }).default({} as any)
 });
 
 /**
@@ -226,33 +226,33 @@ export const SecurityConfigSchema = z.object({
 export const PerformanceConfigSchema = z.object({
   /** Enable performance monitoring */
   monitoring: z.boolean().default(false),
-  
+
   /** Caching settings */
   cache: z.object({
     /** Enable caching */
     enabled: z.boolean().default(false),
-    
+
     /** Cache size limit */
     maxSize: z.number().int().min(1).max(1000).default(100),
-    
+
     /** Cache TTL in milliseconds */
     ttl: z.number().int().min(1000).max(3600000).default(300000), // 5 minutes
-    
+
     /** Cache cleanup interval */
     cleanupInterval: z.number().int().min(10000).max(3600000).default(60000) // 1 minute
-  }).default({}),
-  
+  }).default({} as any),
+
   /** Memory management */
   memory: z.object({
     /** Enable memory monitoring */
     monitoring: z.boolean().default(false),
-    
+
     /** Memory usage warning threshold (percentage) */
     warningThreshold: z.number().min(0).max(100).default(80),
-    
+
     /** Garbage collection hints */
     gcHints: z.boolean().default(false)
-  }).default({})
+  }).default({} as any)
 });
 
 /**
@@ -261,24 +261,24 @@ export const PerformanceConfigSchema = z.object({
 export const DevelopmentConfigSchema = z.object({
   /** Enable development mode */
   enabled: z.boolean().default(false),
-  
+
   /** Enable hot reload */
   hotReload: z.boolean().default(false),
-  
+
   /** Enable debug mode */
   debug: z.boolean().default(false),
-  
+
   /** Enable verbose logging */
   verbose: z.boolean().default(false),
-  
+
   /** Mock settings */
   mocks: z.object({
     /** Enable mock services */
     enabled: z.boolean().default(false),
-    
+
     /** Mock configuration */
-    config: z.record(z.any()).default({})
-  }).default({})
+    config: z.record(z.string(), z.any())
+  })
 });
 
 /**
@@ -287,36 +287,36 @@ export const DevelopmentConfigSchema = z.object({
 export const EnvironmentConfigSchema = z.object({
   /** Environment name */
   environment: z.enum(['development', 'testing', 'production']).default('development'),
-  
+
   /** Environment-specific settings */
   settings: z.object({
     /** Development settings */
     development: DevelopmentConfigSchema.optional(),
-    
+
     /** Testing settings */
     testing: z.object({
       /** Enable test mode */
       enabled: z.boolean().default(false),
-      
+
       /** Test timeout */
       timeout: z.number().int().min(1000).max(300000).default(30000),
-      
+
       /** Mock external services */
       mockExternal: z.boolean().default(true)
     }).optional(),
-    
+
     /** Production settings */
     production: z.object({
       /** Enable production optimizations */
       optimizations: z.boolean().default(true),
-      
+
       /** Enable health checks */
       healthChecks: z.boolean().default(true),
-      
+
       /** Monitoring endpoints */
       monitoring: z.boolean().default(true)
     }).optional()
-  }).default({})
+  }).default({} as any)
 });
 
 /**
@@ -325,24 +325,24 @@ export const EnvironmentConfigSchema = z.object({
 export const ConfigSchema = z.object({
   /** Configuration version */
   version: z.string().default('1.0.0'),
-  
+
   /** Server configuration */
-  server: ServerConfigSchema.default({}),
-  
+  server: ServerConfigSchema.default({} as any),
+
   /** Logging configuration */
-  logging: LoggingConfigSchema.default({}),
-  
+  logging: LoggingConfigSchema.default({} as any),
+
   /** Plugin configuration */
-  plugins: PluginConfigSchema.default({}),
-  
+  plugins: PluginConfigSchema.default({} as any),
+
   /** Security configuration */
-  security: SecurityConfigSchema.default({}),
-  
+  security: SecurityConfigSchema.default({} as any),
+
   /** Performance configuration */
-  performance: PerformanceConfigSchema.default({}),
-  
+  performance: PerformanceConfigSchema.default({} as any),
+
   /** Environment configuration */
-  environment: EnvironmentConfigSchema.default({})
+  environment: EnvironmentConfigSchema.default({} as any)
 });
 
 /**
@@ -367,7 +367,7 @@ export class ConfigValidator {
   static validateConfig(data: unknown): Config {
     return ConfigSchema.parse(data);
   }
-  
+
   /**
    * Safely validate configuration with error handling
    */
@@ -379,49 +379,57 @@ export class ConfigValidator {
       return { success: false, error: result.error };
     }
   }
-  
+
   /**
    * Validate server configuration
    */
   static validateServerConfig(data: unknown): ServerConfig {
     return ServerConfigSchema.parse(data);
   }
-  
+
   /**
    * Validate logging configuration
    */
   static validateLoggingConfig(data: unknown): LoggingConfig {
     return LoggingConfigSchema.parse(data);
   }
-  
+
   /**
    * Validate plugin configuration
    */
   static validatePluginConfig(data: unknown): PluginConfig {
     return PluginConfigSchema.parse(data);
   }
-  
+
   /**
    * Get configuration defaults
    */
   static getDefaults(): Config {
-    return ConfigSchema.parse({});
+    return ConfigSchema.parse({
+      version: '1.0.0',
+      server: {},
+      logging: {},
+      plugins: {},
+      security: {},
+      performance: {},
+      environment: {}
+    });
   }
-  
+
   /**
    * Get server configuration defaults
    */
   static getServerDefaults(): ServerConfig {
     return ServerConfigSchema.parse({});
   }
-  
+
   /**
    * Get logging configuration defaults
    */
   static getLoggingDefaults(): LoggingConfig {
     return LoggingConfigSchema.parse({});
   }
-  
+
   /**
    * Get plugin configuration defaults
    */
@@ -439,14 +447,14 @@ export class ConfigMerger {
    */
   static mergeConfigs<T>(...configs: Partial<T>[]): T {
     const result = {} as T;
-    
+
     for (const config of configs) {
       ConfigMerger.deepMerge(result, config);
     }
-    
+
     return result;
   }
-  
+
   /**
    * Deep merge two objects
    */
@@ -517,13 +525,13 @@ export const ConfigTemplates = {
         maxConcurrent: 1
       },
       isolation: {
-        default: 'service',
-        plugins: {}
+        default: 'service' as const,
+        plugins: {} as Record<string, 'none' | 'service' | 'full'>
       },
       plugins: {}
     }
   }),
-  
+
   /**
    * Production configuration template
    */
@@ -585,7 +593,7 @@ export const ConfigTemplates = {
       }
     }
   }),
-  
+
   /**
    * Testing configuration template
    */
@@ -630,8 +638,8 @@ export const ConfigTemplates = {
         maxConcurrent: 3
       },
       isolation: {
-        default: 'service',
-        plugins: {}
+        default: 'service' as const,
+        plugins: {} as Record<string, 'none' | 'service' | 'full'>
       },
       plugins: {}
     }

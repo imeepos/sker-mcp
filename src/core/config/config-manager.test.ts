@@ -11,6 +11,8 @@ import { EnvironmentConfigProcessor } from './environment-config.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { getPlatformInjector } from '@sker/di';
+import type { IWinstonLogger } from '../logging/winston-logger.js';
 
 // Mock file system operations
 jest.mock('fs');
@@ -20,6 +22,7 @@ describe('ConfigManager', () => {
   let configManager: ConfigManager;
   let originalEnv: NodeJS.ProcessEnv;
   let testConfigDir: string;
+  let mockLogger: jest.Mocked<IWinstonLogger>;
 
   beforeEach(() => {
     // Save original environment
@@ -33,6 +36,19 @@ describe('ConfigManager', () => {
     // Reset mocks
     jest.clearAllMocks();
     
+    // Mock logger
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      log: jest.fn(),
+      child: jest.fn().mockReturnThis(),
+      startTimer: jest.fn(),
+      setRequestContext: jest.fn(),
+      clearRequestContext: jest.fn()
+    } as jest.Mocked<IWinstonLogger>;
+    
     // Mock file system defaults
     mockFs.existsSync.mockReturnValue(false);
     (mockFs.mkdirSync as jest.MockedFunction<any>).mockImplementation(() => {});
@@ -40,8 +56,14 @@ describe('ConfigManager', () => {
       close: jest.fn()
     } as any);
     
+    // Mock fs.promises
+    (mockFs as any).promises = {
+      readFile: jest.fn(),
+      writeFile: jest.fn()
+    };
+    
     // Create fresh config manager instance
-    configManager = new ConfigManager();
+    configManager = new ConfigManager(mockLogger);
   });
 
   afterEach(() => {
@@ -70,7 +92,7 @@ describe('ConfigManager', () => {
       process.env.SKER_SERVER_NAME = 'test-server';
       process.env.SKER_LOG_LEVEL = 'debug';
       
-      const newConfigManager = new ConfigManager();
+      const newConfigManager = new ConfigManager(mockLogger);
       const config = newConfigManager.getConfig();
       
       expect(config.server.name).toBe('test-server');
@@ -332,11 +354,26 @@ describe('ConfigValidator', () => {
 });
 
 describe('Environment Integration', () => {
+  let mockLogger: jest.Mocked<IWinstonLogger>;
+  
   beforeEach(() => {
     // Reset environment
     delete process.env.SKER_SERVER_NAME;
     delete process.env.SKER_LOG_LEVEL;
     delete process.env.NODE_ENV;
+    
+    // Mock logger
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      log: jest.fn(),
+      child: jest.fn().mockReturnThis(),
+      startTimer: jest.fn(),
+      setRequestContext: jest.fn(),
+      clearRequestContext: jest.fn()
+    } as jest.Mocked<IWinstonLogger>;
   });
 
   it('should load configuration from environment variables', () => {
@@ -344,7 +381,7 @@ describe('Environment Integration', () => {
     process.env.SKER_LOG_LEVEL = 'debug';
     process.env.NODE_ENV = 'development';
     
-    const configManager = new ConfigManager();
+    const configManager = new ConfigManager(mockLogger);
     const config = configManager.getConfig();
     
     expect(config.server.name).toBe('env-server');
@@ -354,7 +391,7 @@ describe('Environment Integration', () => {
   it('should prioritize environment variables over defaults', () => {
     process.env.SKER_SERVER_NAME = 'priority-test';
     
-    const configManager = new ConfigManager();
+    const configManager = new ConfigManager(mockLogger);
     const config = configManager.getConfig();
     
     expect(config.server.name).toBe('priority-test');

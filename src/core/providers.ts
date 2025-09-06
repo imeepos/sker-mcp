@@ -34,14 +34,11 @@ import {
   type McpServerConfig
 } from './tokens.js';
 import { ProjectManager } from './project-manager.js';
-import { McpApplication } from './mcp-application.js';
 import { getLoggingConfig } from './logging/logging-config.js';
 import { LayeredLoggerFactory } from './logging/layered-logger.js';
 import { FeatureInjector } from './plugins/feature-injector.js';
 import { PluginConflictDetector } from './plugins/conflict-detector.js';
 import { EnvironmentConfigProcessor } from './config/environment-config.js';
-import { ConfigManager } from './config/config-manager.js';
-import { PluginConfigManager } from './config/plugin-config.js';
 import { ConfigurationSystem } from './config/index.js';
 
 /**
@@ -110,11 +107,6 @@ export function createPlatformProviders(): Provider[] {
     {
       provide: APP_NAME,
       useValue: 'sker-mcp'
-    },
-    // MCP Application provider
-    {
-      provide: McpApplication,
-      useClass: McpApplication
     },
     // Logger configuration provider - uses environment-based configuration
     {

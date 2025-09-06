@@ -88,7 +88,7 @@ export interface IServiceManager {
  * 它管理所有核心组件的生命周期，处理应用程序事件，
  * 并提供启动、停止和管理应用程序的统一接口。
  */
-@Injectable()
+@Injectable({ providedIn: 'auto' })
 export class McpApplication {
   private status: ApplicationStatus = ApplicationStatus.STOPPED;
   private eventListeners: ApplicationEventListener[] = [];
@@ -97,8 +97,8 @@ export class McpApplication {
 
   constructor(
     @Inject(ProjectManager) private readonly projectManager: ProjectManager,
-    @Inject(ServiceManager) private readonly serviceManager: IServiceManager,
-    @Inject(PluginManager) private readonly pluginManager: IPluginManager,
+    @Inject(ServiceManager) private readonly serviceManager: ServiceManager,
+    @Inject(PluginManager) private readonly pluginManager: PluginManager,
     @Inject(MCP_SERVER_CONFIG) private readonly config: IMcpServerConfig,
     @Inject(LOGGER) private readonly logger: any
   ) {

@@ -13,7 +13,7 @@
  * - 应用程序生命周期管理
  * - 插件系统初始化
  */
-
+import "reflect-metadata"
 import { createPlatformInjector, createRootInjector } from '@sker/di';
 import { AppBootstrap, AppConfig } from './common/app-bootstrap.js';
 /**
@@ -118,7 +118,7 @@ Sker Daemon MCP 服务器
   async run(): Promise<void> {
     try {
       console.error('🚀 正在启动 Sker Daemon MCP 服务器...');
-      createPlatformInjector()
+
       // 应用配置到环境变量
       AppBootstrap.applyConfigToEnvironment(this.config);
 
@@ -150,8 +150,9 @@ AppBootstrap.setupGlobalErrorHandlers();
  * 入口点 - 创建并运行应用程序
  */
 async function main(): Promise<void> {
-  createRootInjector([]);
+  createRootInjector()
   const app = new MainApplication();
+  createPlatformInjector()
   await app.run();
 }
 

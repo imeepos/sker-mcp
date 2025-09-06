@@ -422,7 +422,7 @@ export class ValidationMiddleware implements IMiddleware {
    * Convert Zod errors to validation errors
    */
   private convertZodErrors(zodError: ZodError, basePath: string): any[] {
-    return zodError.errors.map(error => ({
+    return zodError.issues.map(error => ({
       field: error.path.join('.') || 'root',
       message: error.message,
       code: error.code,
