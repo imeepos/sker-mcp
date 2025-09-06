@@ -9,6 +9,7 @@
 import { Config, ConfigValidator, ConfigMerger, ConfigTemplates } from './config-schema.js';
 import path from 'path';
 import os from 'os';
+import { mkdirSync } from 'fs';
 
 /**
  * Environment variable mapping configuration
@@ -442,11 +443,10 @@ export const EnvironmentUtils = {
    */
   ensureDirectories: (): void => {
     const dirs = EnvironmentUtils.getDirectories();
-    const fs = require('fs');
     
     for (const [name, dir] of Object.entries(dirs)) {
       try {
-        fs.mkdirSync(dir, { recursive: true });
+        mkdirSync(dir, { recursive: true });
       } catch (error) {
         console.warn(`Failed to create ${name} directory: ${dir}`, error);
       }

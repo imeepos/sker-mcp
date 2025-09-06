@@ -10,6 +10,7 @@ import { WinstonLoggerConfig } from './winston-logger.js';
 import { LayeredLoggerConfig, LogLayer } from './layered-logger.js';
 import path from 'path';
 import os from 'os';
+import { mkdirSync } from 'fs';
 
 /**
  * Environment-specific logging configuration
@@ -404,8 +405,7 @@ export function ensureLogDirectories(config: LayeredLoggerConfig): void {
   if (config.transports?.file?.enabled && config.transports.file.filename) {
     const logDir = path.dirname(config.transports.file.filename);
     try {
-      const fs = require('fs');
-      fs.mkdirSync(logDir, { recursive: true });
+      mkdirSync(logDir, { recursive: true });
     } catch (error) {
       console.warn(`Failed to create log directory: ${logDir}`, error);
     }

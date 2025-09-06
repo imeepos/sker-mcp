@@ -37,6 +37,12 @@ import { ProjectManager } from './project-manager.js';
 import { McpApplication } from './mcp-application.js';
 import { getLoggingConfig } from './logging/logging-config.js';
 import { LayeredLoggerFactory } from './logging/layered-logger.js';
+import { FeatureInjector } from './plugins/feature-injector.js';
+import { PluginConflictDetector } from './plugins/conflict-detector.js';
+import { EnvironmentConfigProcessor } from './config/environment-config.js';
+import { ConfigManager } from './config/config-manager.js';
+import { PluginConfigManager } from './config/plugin-config.js';
+import { ConfigurationSystem } from './config/index.js';
 
 /**
  * Default MCP server configuration
@@ -121,7 +127,6 @@ export function createPlatformProviders(): Provider[] {
     {
       provide: LAYERED_LOGGER_FACTORY,
       useFactory: (config: any, projectManager: ProjectManager) => {
-        const { LayeredLoggerFactory } = require('./logging/layered-logger.js');
         return new LayeredLoggerFactory(config, projectManager);
       },
       deps: [LOGGER_CONFIG, ProjectManager]
@@ -152,7 +157,6 @@ function createPluginSystemProviders(): Provider[] {
     {
       provide: FEATURE_INJECTOR,
       useFactory: (injector: any) => {
-        const { FeatureInjector } = require('./plugins/feature-injector.js');
         return new FeatureInjector(injector);
       },
       deps: [Injector]
@@ -162,7 +166,6 @@ function createPluginSystemProviders(): Provider[] {
     {
       provide: PLUGIN_CONFLICT_DETECTOR,
       useFactory: (logger: any) => {
-        const { PluginConflictDetector } = require('./plugins/conflict-detector.js');
         return new PluginConflictDetector(logger);
       },
       deps: [LOGGER]
@@ -210,35 +213,14 @@ function createConfigurationProviders(): Provider[] {
     {
       provide: ENVIRONMENT_CONFIG_PROCESSOR,
       useFactory: () => {
-        const { EnvironmentConfigProcessor } = require('./config/environment-config.js');
         return EnvironmentConfigProcessor;
       }
-    },
-    
-    // Configuration Manager provider
-    {
-      provide: CONFIG_MANAGER,
-      useFactory: () => {
-        const { ConfigManager } = require('./config/config-manager.js');
-        return new ConfigManager();
-      }
-    },
-    
-    // Plugin Configuration Manager provider
-    {
-      provide: PLUGIN_CONFIG_MANAGER,
-      useFactory: (configManager: any) => {
-        const { PluginConfigManager } = require('./config/plugin-config.js');
-        return new PluginConfigManager(configManager);
-      },
-      deps: [CONFIG_MANAGER]
     },
     
     // Configuration System Factory provider
     {
       provide: CONFIGURATION_SYSTEM,
       useFactory: () => {
-        const { ConfigurationSystem } = require('./config/index.js');
         return ConfigurationSystem.getInstance();
       }
     },
