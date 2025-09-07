@@ -6,7 +6,7 @@
  */
 
 import 'reflect-metadata';
-import { Injector, createInjector, INJECTOR_REGISTRY, InjectorRegistry } from '@sker/di';
+import { Injector, createInjector, INJECTOR_REGISTRY, InjectorRegistry, Injectable, Inject } from '@sker/di';
 import { McpApplication } from '../core/mcp-application.js';
 import { createMcpProviders, createPlatformProviders } from '../core/providers.js';
 
@@ -39,9 +39,12 @@ export interface ParsedCliArgs {
 /**
  * 应用启动器类
  */
+@Injectable({ providedIn: 'platform' })
 export class AppBootstrap {
-  private injector: Injector | null = null;
   private application: McpApplication | null = null;
+  private injector: Injector | null = null;
+
+  constructor(@Inject(Injector) private platformInjector: Injector) { }
 
   /**
    * 从环境变量解析基础配置
@@ -140,18 +143,9 @@ export class AppBootstrap {
    * 创建配置好的依赖注入容器
    */
   createInjector(): Injector {
-    if (this.injector) {
-      return this.injector;
-    }
-
     // 🚀 服务化架构：使用新的注入器创建方式
-    const rootInjector = createInjector([{ provide: INJECTOR_REGISTRY, useClass: InjectorRegistry }]);
-    const injectorRegistry = rootInjector.get(INJECTOR_REGISTRY);
-
-    // 首先创建平台注入器，然后创建应用注入器
-    const platformInjector = injectorRegistry.createPlatformInjector(createPlatformProviders());
+    const injectorRegistry = this.platformInjector.get(INJECTOR_REGISTRY);
     const applicationProviders = createMcpProviders();
-
     this.injector = injectorRegistry.createApplicationInjector(applicationProviders);
     return this.injector;
   }

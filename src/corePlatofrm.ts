@@ -51,7 +51,6 @@ export async function runApplication(appFactory: () => Promise<void>): Promise<v
     try {
         // 设置全局错误处理器
         AppBootstrap.setupGlobalErrorHandlers();
-        
         // 运行应用程序
         await appFactory();
     } catch (error) {
