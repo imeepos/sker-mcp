@@ -11,7 +11,7 @@ import { EnvironmentConfigProcessor } from './environment-config.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { getPlatformInjector } from '@sker/di';
+import { createInjector, INJECTOR_REGISTRY } from '@sker/di';
 import type { IWinstonLogger } from '../logging/winston-logger.js';
 
 // Mock file system operations

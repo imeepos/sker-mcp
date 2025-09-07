@@ -6,7 +6,7 @@
  */
 
 import 'reflect-metadata';
-import { Injector, createInjector, createPlatformInjector } from '@sker/di';
+import { Injector, createInjector, INJECTOR_REGISTRY } from '@sker/di';
 import { McpApplication } from '../core/mcp-application.js';
 import { createMcpProviders, createPlatformProviders } from '../core/providers.js';
 
@@ -144,12 +144,17 @@ export class AppBootstrap {
       return this.injector;
     }
 
+    // 🚀 服务化架构：使用新的注入器创建方式
+    const rootInjector = createInjector([]);
+    const injectorRegistry = rootInjector.get(INJECTOR_REGISTRY);
+    
+    // 通过服务创建应用注入器
     const providers = [
       ...createMcpProviders(),
       ...createPlatformProviders()
     ];
-
-    this.injector = createInjector(providers);
+    
+    this.injector = injectorRegistry.createApplicationInjector(providers);
     return this.injector;
   }
 

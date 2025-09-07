@@ -12,7 +12,7 @@
  * - 插件系统初始化
  */
 import "reflect-metadata"
-import { createPlatformInjector, createRootInjector } from '@sker/di';
+import { createInjector, INJECTOR_REGISTRY } from '@sker/di';
 import { AppBootstrap, AppConfig } from './common/app-bootstrap.js';
 /**
  * 主应用程序类
@@ -136,8 +136,16 @@ AppBootstrap.setupGlobalErrorHandlers();
  * 入口点 - 创建并运行应用程序
  */
 async function main(): Promise<void> {
-  createRootInjector();
-  createPlatformInjector();
+  // 🚀 服务化架构：使用新的注入器创建方式
+  // 1. 创建根注入器（提供基础DI服务）
+  const rootInjector = createInjector([]);
+  
+  // 2. 获取注入器注册表服务
+  const injectorRegistry = rootInjector.get(INJECTOR_REGISTRY);
+  
+  // 3. 通过服务创建平台注入器
+  const platformInjector = injectorRegistry.createPlatformInjector();
+  
   const app = new MainApplication();
   await app.run();
 }

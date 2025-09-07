@@ -88,7 +88,7 @@ export interface IServiceManager {
  * 它管理所有核心组件的生命周期，处理应用程序事件，
  * 并提供启动、停止和管理应用程序的统一接口。
  */
-@Injectable({ providedIn: 'auto' })
+@Injectable({ providedIn: 'application' })
 export class McpApplication {
   private status: ApplicationStatus = ApplicationStatus.STOPPED;
   private eventListeners: ApplicationEventListener[] = [];

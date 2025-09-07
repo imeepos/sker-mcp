@@ -33,6 +33,7 @@ import {
   APP_NAME,
   type McpServerConfig
 } from './tokens.js';
+import { INJECTOR_REGISTRY } from '@sker/di';
 import { ProjectManager } from './project-manager.js';
 import { getLoggingConfig } from './logging/logging-config.js';
 import { LayeredLoggerFactory } from './logging/layered-logger.js';
@@ -154,10 +155,10 @@ function createPluginSystemProviders(): Provider[] {
     // Feature Injector provider
     {
       provide: FEATURE_INJECTOR,
-      useFactory: (injector: any) => {
-        return new FeatureInjector(injector);
+      useFactory: (injectorRegistry: any, injector: any) => {
+        return new FeatureInjector(injectorRegistry, injector);
       },
-      deps: [Injector]
+      deps: [INJECTOR_REGISTRY, Injector]
     },
     
     // Plugin Conflict Detector provider

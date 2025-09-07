@@ -31,14 +31,14 @@ import {
   MCP_RESOURCES,
   MCP_PROMPTS,
   LOGGER
-} from '@sker/mcp';
+} from './tokens.js';
 import type {
   IMcpTool,
   IMcpResource,
   IMcpResourceTemplate,
   IMcpPrompt,
   IMcpServerConfig
-} from '@sker/mcp';
+} from './types.js';
 import { ServicePreBindingManager } from './service-prebinding.js';
 import type {
   PreBoundTool,
@@ -74,7 +74,7 @@ export interface TransportConfig {
  * This class manages the MCP server instance, handles registration of tools, resources,
  * and prompts, and manages the transport layer for communication with MCP clients.
  */
-@Injectable({ providedIn: 'auto' })
+@Injectable({ providedIn: 'application' })
 export class ServiceManager {
   private mcpServer: McpServer;
   private transport: Transport | null = null;

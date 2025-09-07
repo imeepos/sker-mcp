@@ -6,20 +6,20 @@
  * conflict detection, and service instance pre-binding capabilities.
  */
 
-import { Injectable, Inject, Injector, Provider, createApplicationInjector } from '@sker/di';
+import { Injectable, Inject, Injector, Provider, createInjector, INJECTOR_REGISTRY } from '@sker/di';
 import {
   LOGGER,
-  ProjectManager,
   type IPlugin,
   type IPluginManager,
   PluginStatus
-} from '@sker/mcp';
+} from './index.js';
+import { ProjectManager } from './project-manager.js';
 import {
   FeatureInjector,
   PluginDiscovery,
-  PluginLoader,
-  PluginIsolationLevel as IsolationLevel
-} from '@sker/mcp';
+  PluginLoader
+} from './plugins/index.js';
+import { IsolationLevel } from './plugins/feature-injector.js';
 import {
   PluginConflictDetector,
   PluginDiscoveryUtils,
@@ -28,12 +28,12 @@ import {
   ConflictType,
   ResolutionStrategy
 } from './plugins/index.js';
+import type { IWinstonLogger } from './logging/winston-logger.js';
 import type {
-  IWinstonLogger,
   DiscoveredPlugin,
   PluginLoadResult,
   IsolatedPluginInstance
-} from '@sker/mcp';
+} from './plugins/index.js';
 
 /**
  * Enhanced Plugin Manager Implementation
@@ -42,7 +42,7 @@ import type {
  * dynamic discovery and loading, conflict detection, and service pre-binding.
  * Supports hot reloading, performance monitoring, and enterprise-grade security.
  */
-@Injectable({ providedIn: 'auto' })
+@Injectable({ providedIn: 'application' })
 export class PluginManager implements IPluginManager {
   private activePlugins: Map<string, IPlugin> = new Map();
   private pluginStatuses: Map<string, PluginStatus> = new Map();
@@ -58,10 +58,12 @@ export class PluginManager implements IPluginManager {
   constructor(
     @Inject(ProjectManager) private readonly projectManager: ProjectManager,
     @Inject(LOGGER) private readonly logger: IWinstonLogger,
+    @Inject(INJECTOR_REGISTRY) private readonly injectorRegistry: any,
     private readonly applicationInjector?: Injector
   ) {
     // Initialize plugin system components with proper injector reference
     this.featureInjector = new FeatureInjector(
+      this.injectorRegistry,
       this.applicationInjector || this.createFallbackInjector()
     );
     this.pluginDiscovery = new PluginDiscovery(this.projectManager, this.logger);
@@ -75,12 +77,14 @@ export class PluginManager implements IPluginManager {
    * Create fallback injector when no application injector is provided
    */
   private createFallbackInjector(): Injector {
-    // This is a simplified fallback - in practice, you'd want to pass the actual application injector
-    const fallbackProviders: Provider[] = [
+    // 🚀 使用服务化方式创建注入器
+    const rootInjector = createInjector([
       { provide: LOGGER, useValue: this.logger }
-    ];
-
-    return createApplicationInjector(fallbackProviders);
+    ]);
+    
+    return this.injectorRegistry.createApplicationInjector([
+      { provide: LOGGER, useValue: this.logger }
+    ]);
   }
 
   /**

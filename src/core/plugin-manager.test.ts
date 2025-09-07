@@ -123,7 +123,11 @@ describe('PluginManager', () => {
       })
     };
 
-    pluginManager = new PluginManager(mockProjectManager, mockLogger);
+    const mockInjectorRegistry = {
+      createApplicationInjector: jest.fn().mockReturnValue({}),
+      createFeatureInjector: jest.fn().mockReturnValue({})
+    };
+    pluginManager = new PluginManager(mockProjectManager, mockLogger, mockInjectorRegistry);
 
     // Replace the internal instances with mocks
     (pluginManager as any).pluginDiscovery = mockPluginDiscovery;
@@ -688,7 +692,11 @@ describe('PluginManager', () => {
         trace: jest.fn()
       };
       expect(() => {
-        new PluginManager(mockProjectManager, mockLogger as any);
+        const mockInjectorRegistry = {
+          createApplicationInjector: jest.fn().mockReturnValue({}),
+          createFeatureInjector: jest.fn().mockReturnValue({})
+        };
+        new PluginManager(mockProjectManager, mockLogger as any, mockInjectorRegistry);
       }).not.toThrow();
     });
 

@@ -8,7 +8,7 @@
 import { Injectable, Inject } from '@sker/di';
 import { LOGGER } from '../core/tokens.js';
 import type { IWinstonLogger } from '../core/logging/winston-logger.js';
-import chokidar from 'chokidar';
+import chokidar, { FSWatcher } from 'chokidar';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -39,7 +39,7 @@ export interface PluginWatchConfig {
  */
 @Injectable()
 export class FileWatcher {
-  private watchers = new Map<string, chokidar.FSWatcher>();
+  private watchers = new Map<string, FSWatcher>();
   private watchConfigs = new Map<string, PluginWatchConfig>();
   private debounceTimers = new Map<string, NodeJS.Timeout>();
   private isWatching = false;
@@ -123,7 +123,8 @@ export class FileWatcher {
         this.handleFileChange(filePath, watchConfig);
       });
 
-      watcher.on('error', (error: Error) => {
+      watcher.on('error', (err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
         this.logger.error('File watcher error', {
           pluginName,
           mainFilePath,

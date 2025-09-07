@@ -11,8 +11,10 @@ import {
   Injector,
   Provider,
   Injectable,
+  Inject,
   InjectionToken,
-  createFeatureInjector
+  createInjector,
+  INJECTOR_REGISTRY
 } from '@sker/di';
 import type {
   IPlugin,
@@ -173,12 +175,13 @@ class IsolatedPluginInstanceImpl implements IsolatedPluginInstance {
  * providing secure plugin execution environments with configurable access
  * to parent container services.
  */
-@Injectable()
+@Injectable({ providedIn: 'application' })
 export class FeatureInjector implements IFeatureInjector {
   private readonly isolatedPlugins = new Map<string, IsolatedPluginInstance>();
   private readonly pluginContainers = new Map<string, Container>();
 
   constructor(
+    @Inject(INJECTOR_REGISTRY) private readonly injectorRegistry: any,
     private readonly parentInjector: Injector
   ) {}
 
@@ -332,7 +335,8 @@ export class FeatureInjector implements IFeatureInjector {
     // Create a new container/injector
     // Note: This is a simplified implementation
     // In a real system, you'd use the actual DI framework's child container creation
-    const childInjector = createFeatureInjector(childProviders, this.parentInjector as any);
+    // 🚀 使用服务化方式创建功能注入器
+    const childInjector = this.injectorRegistry.createFeatureInjector(childProviders, this.parentInjector);
 
     return {
       injector: childInjector,
@@ -361,7 +365,8 @@ export class FeatureInjector implements IFeatureInjector {
     // Add minimal core services if needed
     // This might include essential services like logging, etc.
 
-    const isolatedInjector = createFeatureInjector(providers, this.parentInjector as any);
+    // 🚀 使用服务化方式创建完全隔离的注入器
+    const isolatedInjector = this.injectorRegistry.createFeatureInjector(providers, this.parentInjector);
 
     return {
       injector: isolatedInjector,

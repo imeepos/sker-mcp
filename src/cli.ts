@@ -7,7 +7,7 @@
  * 包含启动、停止、状态检查、插件管理和配置管理等命令。
  */
 
-import { createPlatformInjector, createRootInjector } from '@sker/di';
+import { createInjector, INJECTOR_REGISTRY } from '@sker/di';
 import { AppBootstrap } from './common/app-bootstrap.js';
 import { ProjectManager } from './core/project-manager.js';
 import { HotReloadManager } from './dev/hot-reload-manager.js';
@@ -717,13 +717,19 @@ Sker Daemon MCP 服务器 CLI
    * 主 CLI 运行方法
    */
   async run(argv: string[]): Promise<void> {
-    createPlatformInjector([
+    // 🚀 服务化架构：使用新的注入器创建方式
+    const rootInjector = createInjector([]);
+    const injectorRegistry = rootInjector.get(INJECTOR_REGISTRY);
+    
+    // 通过服务创建平台注入器和提供者
+    const platformInjector = injectorRegistry.createPlatformInjector([
       {
         provide: Logger, useFactory: (layer: LayeredLoggerFactory) => {
           return layer.createPlatformLogger(`mcp-app`)
         }, deps: [LayeredLoggerFactory]
       }
-    ])
+    ]);
+    
     const parsed = this.parseArguments(argv);
 
     // 处理全局帮助
@@ -757,7 +763,7 @@ Sker Daemon MCP 服务器 CLI
  * 主入口点
  */
 async function main(): Promise<void> {
-  createRootInjector([])
+  // 🚀 服务化架构：注入器创建已移到 CLI 的 run 方法中
   const cli = new SkerCli();
   await cli.run(process.argv);
 }

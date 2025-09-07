@@ -177,7 +177,10 @@ describe('Plugin System Integration Tests', () => {
       }
     };
 
-    featureInjector = new FeatureInjector(mockParentInjector);
+    const mockInjectorRegistry = {
+      createFeatureInjector: jest.fn().mockReturnValue(mockParentInjector)
+    };
+    featureInjector = new FeatureInjector(mockInjectorRegistry, mockParentInjector);
     conflictDetector = new PluginConflictDetector(
       { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }
     );

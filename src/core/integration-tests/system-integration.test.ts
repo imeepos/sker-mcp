@@ -229,7 +229,10 @@ describe('System Integration Tests', () => {
       mockLogger
     );
 
-    featureInjector = new FeatureInjector(mockContainer as any);
+    const mockInjectorRegistry = {
+      createFeatureInjector: jest.fn().mockReturnValue(mockContainer)
+    };
+    featureInjector = new FeatureInjector(mockInjectorRegistry, mockContainer as any);
     conflictDetector = new PluginConflictDetector(mockLogger);
 
     mockConfig = {
