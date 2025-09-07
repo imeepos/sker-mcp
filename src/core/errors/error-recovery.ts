@@ -7,8 +7,8 @@
  */
 
 import { Injectable, Inject } from '@sker/di';
-import { LOGGER } from '@sker/mcp';
-import type { IWinstonLogger } from '@sker/mcp';
+import { LOGGER } from '../tokens';
+import type { IWinstonLogger } from '../logging/winston-logger';
 
 /**
  * Recovery strategy types

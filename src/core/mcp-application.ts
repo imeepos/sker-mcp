@@ -8,17 +8,15 @@
 
 import { Injectable, Inject } from '@sker/di';
 import {
-  ProjectManager,
-  MCP_SERVER_CONFIG,
-  LOGGER,
   type IMcpTool,
   type IMcpResource,
   type IMcpPrompt,
   type IMcpServerConfig,
-  type IPluginManager,
-  PluginManager
-} from '@sker/mcp';
-import { ServiceManager, ServiceManagerStatus } from './service-manager';
+} from './types';
+import { ServiceManager } from './service-manager';
+import { ProjectManager } from './project-manager';
+import { PluginManager } from './plugin-manager';
+import { LOGGER, MCP_SERVER_CONFIG } from './tokens';
 
 /**
  * 应用程序状态枚举

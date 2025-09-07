@@ -45,7 +45,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
-    "@sker/di": "^2.0.0",
+    "@sker/di": "^1.0.10",
     "chokidar": "^4.0.3",
     "express": "^5.1.0",
     "reflect-metadata": "^0.2.2",

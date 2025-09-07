@@ -14,12 +14,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "baseUrl": "./src",
-    "paths": {
-      "@sker/mcp": ["./core/index.ts"],
-      "@sker/mcp/*": ["./core/*"],
-      "@sker/di": ["../node_modules/@sker/di"],
-      "@sker/di/*": ["../node_modules/@sker/di/*"]
-    }
+    "paths": {}
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
