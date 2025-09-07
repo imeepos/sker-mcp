@@ -139,6 +139,13 @@ export function createPlatformProviders(): Provider[] {
       },
       deps: [LAYERED_LOGGER_FACTORY]
     },
+    
+    // Plugin Manager Provider
+    {
+      provide: PluginManager,
+      useClass: PluginManager
+    },
+    
     // Plugin system providers
     ...createPluginSystemProviders(),
     

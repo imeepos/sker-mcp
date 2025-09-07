@@ -7,14 +7,11 @@
  * 包含启动、停止、状态检查、插件管理和配置管理等命令。
  */
 
-import { createInjector, INJECTOR_REGISTRY } from '@sker/di';
-import { AppBootstrap } from './common/app-bootstrap.js';
+import { createCliApplication, runApplication } from './corePlatofrm.js';
 import { ProjectManager } from './core/project-manager.js';
 import { HotReloadManager } from './dev/hot-reload-manager.js';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Logger } from 'winston';
-import { LayeredLoggerFactory } from './core/logging/layered-logger.js';
 
 /**
  * CLI 命令接口
@@ -43,10 +40,9 @@ interface ParsedArgs {
  */
 class SkerCli {
   private commands: Map<string, CliCommand> = new Map();
-  private bootstrap: AppBootstrap;
+  private bootstrap: any; // 将通过平台工厂获取
 
   constructor() {
-    this.bootstrap = new AppBootstrap();
     this.setupCommands();
   }
 
@@ -175,21 +171,30 @@ class SkerCli {
   }
 
   /**
-   * 获取配置好的项目管理器
+   * 获取配置好的项目管理器 - 使用平台工厂
    */
-  private getProjectManager(): ProjectManager {
+  private async getProjectManager(): Promise<ProjectManager> {
+    if (!this.bootstrap) {
+      this.bootstrap = await createCliApplication();
+    }
     const injector = this.bootstrap.createInjector();
     return injector.get(ProjectManager);
   }
 
   /**
-   * 处理启动命令
+   * 处理启动命令 - 使用平台工厂
    */
   private async handleStart(_args: string[], options: Record<string, any>): Promise<void> {
     console.log('🚀 正在启动 Sker Daemon MCP 服务器...');
 
     try {
+      // 获取 bootstrap 实例
+      if (!this.bootstrap) {
+        this.bootstrap = await createCliApplication();
+      }
+
       // 应用选项到环境变量
+      const { AppBootstrap } = await import('./common/app-bootstrap.js');
       const config = AppBootstrap.parseEnvironmentConfig();
       if (options.home) {
         config.homeDir = options.home;
@@ -231,7 +236,7 @@ class SkerCli {
     console.log('📊 Sker Daemon MCP 服务器状态\n');
 
     try {
-      const projectManager = this.getProjectManager();
+      const projectManager = await this.getProjectManager();
 
       // 显示目录信息
       console.log('📁 目录信息:');
@@ -300,7 +305,7 @@ class SkerCli {
     console.log('🏗️  正在初始化 Sker Daemon MCP 项目...');
 
     try {
-      const projectManager = this.getProjectManager();
+      const projectManager = await this.getProjectManager();
 
       // 创建目录结构
       await projectManager.createProjectStructure();
@@ -351,7 +356,7 @@ class SkerCli {
    */
   private async listPlugins(options: Record<string, any>): Promise<void> {
     try {
-      const projectManager = this.getProjectManager();
+      const projectManager = await this.getProjectManager();
 
       const plugins = await projectManager.scanPluginsDirectory();
 
@@ -382,7 +387,7 @@ class SkerCli {
    */
   private async showPluginInfo(pluginName: string, options: Record<string, any>): Promise<void> {
     try {
-      const projectManager = this.getProjectManager();
+      const projectManager = await this.getProjectManager();
 
       const pluginExists = await projectManager.pluginDirectoryExists(pluginName);
       if (!pluginExists) {
@@ -498,11 +503,14 @@ class SkerCli {
 
     try {
       // 创建应用程序注入器和热重载管理器
+      if (!this.bootstrap) {
+        this.bootstrap = await createCliApplication();
+      }
       const injector = this.bootstrap.createInjector();
       const hotReloadManager = injector.get(HotReloadManager);
 
       // 设置事件监听器
-      hotReloadManager.onEvent((data) => {
+      hotReloadManager.onEvent((data:any) => {
         switch (data.event) {
           case 'watch_started':
             console.log('✅ 开发模式已启动');
@@ -524,7 +532,7 @@ class SkerCli {
 
       const status = hotReloadManager.getDevModeStatus();
       console.log(`📁 监控 ${status.watchingPlugins} 个开发插件`);
-      
+
       if (status.watchingPlugins > 0) {
         console.log('\n📋 监控的插件:');
         const watchingPlugins = hotReloadManager.getWatchingPlugins();
@@ -561,13 +569,16 @@ class SkerCli {
    */
   private async showDevStatus(options: Record<string, any>): Promise<void> {
     try {
+      if (!this.bootstrap) {
+        this.bootstrap = await createCliApplication();
+      }
       const injector = this.bootstrap.createInjector();
       const hotReloadManager = injector.get(HotReloadManager);
-      
+
       const status = hotReloadManager.getDevModeStatus();
-      
+
       console.log('🔥 开发模式状态\n');
-      
+
       console.log(`状态: ${status.isActive ? '✅ 运行中' : '❌ 未运行'}`);
       console.log(`监控插件: ${status.watchingPlugins}`);
       console.log(`总重载次数: ${status.totalReloads}`);
@@ -602,6 +613,9 @@ class SkerCli {
     try {
       console.log(`🔄 手动重载插件: ${pluginName}`);
 
+      if (!this.bootstrap) {
+        this.bootstrap = await createCliApplication();
+      }
       const injector = this.bootstrap.createInjector();
       const hotReloadManager = injector.get(HotReloadManager);
 
@@ -714,22 +728,9 @@ Sker Daemon MCP 服务器 CLI
   }
 
   /**
-   * 主 CLI 运行方法
+   * 主 CLI 运行方法 - 使用平台工厂
    */
   async run(argv: string[]): Promise<void> {
-    // 🚀 服务化架构：使用新的注入器创建方式
-    const rootInjector = createInjector([]);
-    const injectorRegistry = rootInjector.get(INJECTOR_REGISTRY);
-    
-    // 通过服务创建平台注入器和提供者
-    const platformInjector = injectorRegistry.createPlatformInjector([
-      {
-        provide: Logger, useFactory: (layer: LayeredLoggerFactory) => {
-          return layer.createPlatformLogger(`mcp-app`)
-        }, deps: [LayeredLoggerFactory]
-      }
-    ]);
-    
     const parsed = this.parseArguments(argv);
 
     // 处理全局帮助
@@ -760,16 +761,12 @@ Sker Daemon MCP 服务器 CLI
 }
 
 /**
- * 主入口点
+ * 主入口点 - 使用平台工厂和统一错误处理
  */
 async function main(): Promise<void> {
-  // 🚀 服务化架构：注入器创建已移到 CLI 的 run 方法中
   const cli = new SkerCli();
   await cli.run(process.argv);
 }
 
-// 仅在这是主模块时运行
-main().catch((error) => {
-  console.error('💥 CLI 执行失败:', error);
-  process.exit(1);
-});
+// 仅在这是主模块时运行 - 使用统一的错误处理
+runApplication(main);
