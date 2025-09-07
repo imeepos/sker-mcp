@@ -84,10 +84,20 @@ function deepMerge(target: any, source: any): void {
 describe('PluginConfigManager', () => {
   let configManager: ConfigManager;
   let pluginConfigManager: PluginConfigManager;
+  let mockLogger: any;
 
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
+
+    // Mock logger
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      trace: jest.fn()
+    };
 
     // Mock file system defaults
     mockFs.existsSync.mockReturnValue(false);
@@ -102,7 +112,7 @@ describe('PluginConfigManager', () => {
     });
 
     // Create fresh instances
-    configManager = new ConfigManager();
+    configManager = new ConfigManager(mockLogger);
 
     // Mock the getConfig method to return a proper structure
     const mockGetConfig = jest.spyOn(configManager, 'getConfig');
@@ -500,12 +510,22 @@ describe('PluginConfigUtils', () => {
 describe('Integration Tests', () => {
   let configManager: ConfigManager;
   let pluginConfigManager: PluginConfigManager;
+  let mockLogger: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockFs.existsSync.mockReturnValue(false);
     
-    configManager = new ConfigManager();
+    // Mock logger
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      trace: jest.fn()
+    };
+    
+    configManager = new ConfigManager(mockLogger);
     pluginConfigManager = new PluginConfigManager(configManager);
   });
 

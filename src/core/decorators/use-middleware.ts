@@ -245,11 +245,14 @@ export class BuiltinMiddlewares {
     return async (context, next) => {
       const prefix = options.prefix || 'MCP';
       
+      console.log(`[${prefix}] Starting tool ${context.methodName}`);
+      
       try {
         const result = await next();
+        console.log(`[${prefix}] Completed tool ${context.methodName}`);
         return result;
       } catch (error) {
-        console.error(`[${prefix}] Failed ${context.requestType} ${context.methodName}:`, error);
+        console.error(`[${prefix}] Failed tool ${context.methodName}:`, error);
         throw error;
       }
     };
@@ -264,9 +267,11 @@ export class BuiltinMiddlewares {
       try {
         const result = await next();
         const duration = Date.now() - startTime;
+        console.log(`[TIMING] ${context.methodName} executed in ${duration}ms`);
         return result;
       } catch (error) {
         const duration = Date.now() - startTime;
+        console.log(`[TIMING] ${context.methodName} failed after ${duration}ms`);
         throw error;
       }
     };

@@ -355,13 +355,18 @@ describe('ServiceManager', () => {
       expect(mockLogger.debug).toHaveBeenCalledWith('Set up STDIO transport');
     });
 
-    it('should_fallback_to_stdio_for_http_transport', async () => {
+    it('should_setup_http_transport_correctly', async () => {
       const httpConfig = { ...mockConfig, transport: { type: 'http' as const, host: 'localhost', port: 3000 } };
       const manager = new ServiceManager([], [], [], httpConfig, mockLogger);
 
       await manager.start();
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('HTTP transport not yet implemented, using STDIO');
+      expect(mockLogger.debug).toHaveBeenCalledWith('Set up HTTP transport', expect.objectContaining({
+        host: 'localhost',
+        port: 3000,
+        cors: true,
+        enableSessions: true
+      }));
     });
 
     it('should_throw_error_for_unsupported_transport', async () => {

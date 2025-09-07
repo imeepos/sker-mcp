@@ -6,7 +6,7 @@
  * conflict detection, and service instance pre-binding capabilities.
  */
 
-import { Injectable, Inject, Injector, Provider, createInjector, INJECTOR_REGISTRY } from '@sker/di';
+import { Injectable, Inject, Injector, Provider, createInjector, INJECTOR_REGISTRY, InjectorRegistry } from '@sker/di';
 import {
   LOGGER,
   type IPlugin,
@@ -58,7 +58,7 @@ export class PluginManager implements IPluginManager {
   constructor(
     @Inject(ProjectManager) private readonly projectManager: ProjectManager,
     @Inject(LOGGER) private readonly logger: IWinstonLogger,
-    @Inject(INJECTOR_REGISTRY) private readonly injectorRegistry: any,
+    @Inject(INJECTOR_REGISTRY) private readonly injectorRegistry: InjectorRegistry,
     private readonly applicationInjector?: Injector
   ) {
     // Initialize plugin system components with proper injector reference
@@ -82,9 +82,15 @@ export class PluginManager implements IPluginManager {
       { provide: LOGGER, useValue: this.logger }
     ]);
     
-    return this.injectorRegistry.createApplicationInjector([
-      { provide: LOGGER, useValue: this.logger }
-    ]);
+    // 如果 injectorRegistry 可用，使用它创建应用注入器
+    if (this.injectorRegistry) {
+      return this.injectorRegistry.createApplicationInjector([
+        { provide: LOGGER, useValue: this.logger }
+      ]);
+    }
+    
+    // 否则直接返回根注入器作为回退
+    return rootInjector;
   }
 
   /**

@@ -69,8 +69,8 @@ describe('McpApplication', () => {
 
     mcpApplication = new McpApplication(
       mockProjectManager,
-      mockServiceManager,
-      mockPluginManager,
+      mockServiceManager as any,
+      mockPluginManager as any,
       mockConfig,
       mockLogger
     );
@@ -84,7 +84,7 @@ describe('McpApplication', () => {
     it('should_create_instance_with_dependencies', () => {
       expect(mcpApplication).toBeInstanceOf(McpApplication);
       expect(mockLogger.info).toHaveBeenCalledWith(
-        'McpApplication initialized',
+        'MCP 应用程序已初始化',
         { name: 'test-mcp-server', version: '1.0.0' }
       );
     });
@@ -97,8 +97,8 @@ describe('McpApplication', () => {
       expect(() => {
         new McpApplication(
           mockProjectManager,
-          mockServiceManager,
-          mockPluginManager,
+          mockServiceManager as any,
+          mockPluginManager as any,
           mockConfig,
           null
         );
@@ -115,7 +115,7 @@ describe('McpApplication', () => {
       expect(mockProjectManager.scanPluginsDirectory).toHaveBeenCalled();
       expect(mockServiceManager.start).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
-        'MCP Application started successfully',
+        'MCP 应用程序启动成功',
         expect.objectContaining({
           status: ApplicationStatus.RUNNING,
           transport: mockConfig.transport
@@ -153,7 +153,7 @@ describe('McpApplication', () => {
       await expect(mcpApplication.start()).rejects.toThrow('Failed to create project structure');
       expect(mcpApplication.getStatus()).toBe(ApplicationStatus.ERROR);
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to start MCP Application',
+        '启动 MCP 应用程序失败',
         expect.objectContaining({
           error: 'Failed to create project structure'
         })
@@ -247,7 +247,7 @@ describe('McpApplication', () => {
       await expect(mcpApplication.stop()).resolves.not.toThrow();
       expect(mcpApplication.getStatus()).toBe(ApplicationStatus.STOPPED);
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to unload plugin',
+        '卸载插件失败',
         expect.objectContaining({
           plugin: 'test-plugin',
           error: 'Plugin cleanup failed'

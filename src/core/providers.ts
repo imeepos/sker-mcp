@@ -82,19 +82,22 @@ export function createMcpProviders(): Provider[] {
     // MCP Tools Collection Provider - uses factory from token
     {
       provide: MCP_TOOLS,
-      useFactory: () => []
+      useFactory: () => [],
+      multi: true
     },
     
     // MCP Resources Collection Provider - uses factory from token
     {
       provide: MCP_RESOURCES,
-      useFactory: () => []
+      useFactory: () => [],
+      multi: true
     },
     
     // MCP Prompts Collection Provider - uses factory from token
     {
       provide: MCP_PROMPTS,
-      useFactory: () => []
+      useFactory: () => [],
+      multi: true
     }
   ];
 }

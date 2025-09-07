@@ -31,6 +31,12 @@ export const ServerConfigSchema = z.object({
 
     /** HTTP transport specific settings */
     http: z.object({
+      /** HTTP server port */
+      port: z.number().int().min(1000).max(65535).optional(),
+
+      /** HTTP server host */
+      host: z.string().optional(),
+
       /** Enable CORS */
       cors: z.boolean().default(true),
 
@@ -298,8 +304,8 @@ export const DevelopmentConfigSchema = z.object({
     enabled: z.boolean().default(false),
 
     /** Mock configuration */
-    config: z.record(z.string(), z.any())
-  })
+    config: z.record(z.string(), z.any()).default({})
+  }).default({ enabled: false, config: {} })
 });
 
 /**

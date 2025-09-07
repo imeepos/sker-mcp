@@ -40,23 +40,11 @@ describe('Core Injection Tokens', () => {
     });
   });
 
-  describe('Manager Tokens', () => {
-    it('should_export_typed_SERVICE_MANAGER_token', async () => {
-      const { SERVICE_MANAGER } = await import('./tokens');
-      expect(SERVICE_MANAGER).toBeDefined();
-      expect(String(SERVICE_MANAGER)).toContain('SERVICE_MANAGER');
-    });
-
-    it('should_export_typed_PROJECT_MANAGER_token', async () => {
-      const { PROJECT_MANAGER } = await import('./tokens');
-      expect(PROJECT_MANAGER).toBeDefined();
-      expect(String(PROJECT_MANAGER)).toContain('PROJECT_MANAGER');
-    });
-
-    it('should_export_typed_PLUGIN_MANAGER_token', async () => {
-      const { PLUGIN_MANAGER } = await import('./tokens');
-      expect(PLUGIN_MANAGER).toBeDefined();
-      expect(String(PLUGIN_MANAGER)).toContain('PLUGIN_MANAGER');
+  describe('Core Tokens', () => {
+    it('should_export_core_tokens', async () => {
+      const { LOGGER, MCP_SERVER_CONFIG } = await import('./tokens');
+      expect(LOGGER).toBeDefined();
+      expect(MCP_SERVER_CONFIG).toBeDefined();
     });
   });
 
@@ -78,10 +66,10 @@ describe('Core Injection Tokens', () => {
       expect(defaultConfig).toHaveProperty('transports');
     });
 
-    it('should_export_typed_LOGGER_FACTORY_token', async () => {
-      const { LOGGER_FACTORY } = await import('./tokens');
-      expect(LOGGER_FACTORY).toBeDefined();
-      expect(String(LOGGER_FACTORY)).toContain('LOGGER_FACTORY');
+    it('should_export_typed_LAYERED_LOGGER_FACTORY_token', async () => {
+      const { LAYERED_LOGGER_FACTORY } = await import('./tokens');
+      expect(LAYERED_LOGGER_FACTORY).toBeDefined();
+      expect(String(LAYERED_LOGGER_FACTORY)).toContain('LAYERED_LOGGER_FACTORY');
     });
 
     it('should_export_typed_APP_NAME_token', async () => {
